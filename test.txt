@@ -1,0 +1,6 @@
+case 1: connect feature
+1/ client connect to server
+
+all is working ...
+
+let's

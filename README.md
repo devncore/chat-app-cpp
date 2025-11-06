@@ -1,2 +1,8 @@
-# chat
-chat application with client and server implementation. Data are transfered via gRPC, client uses Qt for graphics.
+Features:
+- classical chat with clients and a server
+
+Limitations:
+- only one channel that everyone connected client join
+
+Techno:
+- database: SQLite (QSqlDatabase lib from Qt)

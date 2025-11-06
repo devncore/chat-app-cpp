@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package chat;
+
+service ChatService {
+  rpc Connect(ConnectRequest) returns (ConnectResponse);
+  rpc InformServerNewMessage(SendMessageRequest) returns (google.protobuf.Empty);
+  rpc InformClientsNewMessage(InformClientsNewMessageRequest)
+      returns (stream InformClientsNewMessageResponse);
+}
+
+message ConnectRequest {
+  reserved 1;
+  string pseudonym = 2;
+  string gender = 3;
+  string country = 4;
+}
+
+message ConnectResponse {
+  bool accepted = 1;
+  string message = 2;
+  reserved 3;
+}
+
+message SendMessageRequest {
+  string content = 1;
+  reserved 2;
+}
+
+message InformClientsNewMessageRequest {
+  reserved 1;
+}
+
+message InformClientsNewMessageResponse {
+  string author = 1;
+  string content = 2;
+}
