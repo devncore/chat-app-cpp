@@ -50,6 +50,8 @@ add_custom_target(generate_chat_proto_client DEPENDS ${GENERATED_SRCS} ${GENERAT
 
 qt_add_executable(chat_client
     src/main.cpp
+    src/chat_window.cpp
+    src/grpc_chat_client.cpp
     ${GENERATED_SRCS}
 )
 

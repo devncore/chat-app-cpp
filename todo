@@ -1,5 +1,10 @@
-2/ => re-struct code
-
+2/ => re-struct client code (Separate Qt and gRPC logic)
+3/ Add list of connected clients on each clients
+    a/ each time a new client is connected, notify the others (if any)
+    with a new frame 'NewClientConnected'.
+    
+    b/ on the display side, let's get recommandation display from
+    AI (maybe having tab for conversation and tab for connected people).
 
 X/ selection list on client side for country, gender
 X/ connected client list is a database on server side
