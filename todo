@@ -1,10 +1,3 @@
-1/ implement the message send mechanism
-    a/ implement a new proto rpc 'InformServerNewMessage'
-    b/ then server will transmit to each client the newly received message
-    we can call this message 'InformClientsNewMessage'
-    c/ client shall implement this new grpc frame and fresh the widget with this new 
-    message
-
 2/ => re-struct code
 
 

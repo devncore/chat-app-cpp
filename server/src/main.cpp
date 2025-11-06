@@ -40,11 +40,7 @@ public:
       return grpc::Status::OK;
     }
 
-    std::cout << "peer address = " << peer_address << std::endl;
-    // std::cout << "peer Id = " <<  << std::endl;
-
     std::string log_message;
-
     {
       std::lock_guard<std::mutex> lock(mutex_);
       const bool pseudonymInUse =

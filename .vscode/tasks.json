@@ -1,0 +1,37 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "configure_client",
+      "type": "shell",
+      "command": "cmake -S client -B client/build",
+      "detail": "Configure the Qt client project"
+    },
+    {
+      "label": "build_and_run_client",
+      "type": "shell",
+      "command": "cmake --build client/build && ./client/build/chat_client",
+      "dependsOn": ["configure_client"],
+      "detail": "Build and run the Qt client executable"
+    },
+        {
+      "label": "configure_server",
+      "type": "shell",
+      "command": "cmake -S server -B server/build",
+      "detail": "Configure the Qt server project"
+    },
+    {
+      "label": "build_and_run_server",
+      "type": "shell",
+      "command": "cmake --build server/build && ./server/build/chat_server",
+      "dependsOn": ["configure_server"],
+      "detail": "Build and run the Qt server executable"
+    },
+    {
+      "label": "clean_all",
+      "type": "shell",
+      "command": "rm -rf client/build server/build",
+      "detail": "Remove all build artifacts"
+    }
+  ]
+}
