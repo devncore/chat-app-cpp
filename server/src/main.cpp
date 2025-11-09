@@ -43,6 +43,8 @@ public:
     std::string log_message;
     {
       std::lock_guard<std::mutex> lock(mutex_);
+
+      // check if pseudo is already in use or not
       const bool pseudonymInUse =
           std::any_of(clients_.cbegin(), clients_.cend(),
                       [&request, &peer_address](const auto &entry) {
@@ -58,6 +60,7 @@ public:
         return grpc::Status::OK;
       }
 
+      //
       ClientInfo info{
           .pseudonym = request->pseudonym(),
           .gender = request->gender(),
@@ -65,16 +68,21 @@ public:
           .next_message_index = message_history_.size(),
       };
 
-      log_message =
-          "New client '" + request->pseudonym() + "' is now connected";
+      // here handle error case where already connected peer tries
+      // to reconnect
       auto it = clients_.find(peer_address);
       if (it != clients_.end()) {
         it->second = std::move(info);
+        log_message = "Client already registered for peer '" + peer_address +
+                      "' override info.";
       } else {
         clients_.emplace(peer_address, std::move(info));
+        log_message =
+            "New client '" + request->pseudonym() + "' is now connected";
       }
     }
 
+    // send status response to sender client
     response->set_accepted(true);
     response->set_message(log_message);
     std::cout << log_message << std::endl;
