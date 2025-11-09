@@ -16,6 +16,8 @@ class GrpcChatClient {
 public:
   using MessageCallback =
       std::function<void(const chat::InformClientsNewMessageResponse &)>;
+  using ClientEventCallback =
+      std::function<void(const chat::ClientEventData &)>;
   using ErrorCallback = std::function<void(const std::string &)>;
 
   explicit GrpcChatClient(std::string serverAddress = "localhost:50051");
@@ -36,6 +38,9 @@ public:
 
   void startMessageStream(MessageCallback onMessage, ErrorCallback onError);
   void stopMessageStream();
+  void startClientEventStream(ClientEventCallback onEvent,
+                              ErrorCallback onError);
+  void stopClientEventStream();
 
 private:
   void ensureStub();
@@ -47,5 +52,8 @@ private:
   std::atomic<bool> messageStreamRunning_{false};
   std::thread messageStreamThread_;
   std::shared_ptr<grpc::ClientContext> messageStreamContext_;
+  std::atomic<bool> clientEventStreamRunning_{false};
+  std::thread clientEventStreamThread_;
+  std::shared_ptr<grpc::ClientContext> clientEventStreamContext_;
   std::mutex stubMutex_;
 };

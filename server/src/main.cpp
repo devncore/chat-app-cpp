@@ -20,6 +20,7 @@ struct ClientInfo {
   std::string gender;
   std::string country;
   std::size_t next_message_index{0};
+  std::size_t next_client_event_index{0};
 };
 
 class ChatServiceImpl final : public chat::ChatService::Service {
@@ -60,12 +61,13 @@ public:
         return grpc::Status::OK;
       }
 
-      //
+      // fill client info to be added
       ClientInfo info{
           .pseudonym = request->pseudonym(),
           .gender = request->gender(),
           .country = request->country(),
           .next_message_index = message_history_.size(),
+          .next_client_event_index = client_events_.size(),
       };
 
       // here handle error case where already connected peer tries
@@ -86,6 +88,9 @@ public:
     response->set_accepted(true);
     response->set_message(log_message);
     std::cout << log_message << std::endl;
+
+    broadcastClientEvent(request->pseudonym(),
+                         chat::ClientEventData::ADD);
 
     return grpc::Status::OK;
   }
@@ -192,6 +197,67 @@ public:
     }
   }
 
+  grpc::Status InformClientsClientEvent(
+      grpc::ServerContext *context, const google::protobuf::Empty *request,
+      grpc::ServerWriter<chat::ClientEventData> *writer) override {
+    (void)request;
+    if (writer == nullptr) {
+      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                          "writer is required");
+    }
+
+    const std::string peer = context ? context->peer() : std::string{};
+    if (peer.empty()) {
+      return grpc::Status(grpc::StatusCode::UNAUTHENTICATED,
+                          "peer information missing");
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      auto it = clients_.find(peer);
+      if (it == clients_.end()) {
+        return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
+                            "client not connected");
+      }
+
+      if (it->second.next_client_event_index > client_events_.size()) {
+        it->second.next_client_event_index = client_events_.size();
+      }
+    }
+
+    using namespace std::chrono_literals;
+    while (true) {
+      chat::ClientEventData nextEvent;
+      {
+        std::unique_lock<std::mutex> lock(mutex_);
+        while (true) {
+          if (context != nullptr && context->IsCancelled()) {
+            return grpc::Status::CANCELLED;
+          }
+
+          auto it = clients_.find(peer);
+          if (it == clients_.end()) {
+            return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
+                                "client not connected");
+          }
+
+          if (it->second.next_client_event_index < client_events_.size()) {
+            nextEvent = client_events_[it->second.next_client_event_index];
+            ++it->second.next_client_event_index;
+            break;
+          }
+
+          client_event_cv_.wait_for(lock, 200ms);
+        }
+      }
+
+      if (!writer->Write(nextEvent)) {
+        return grpc::Status(grpc::StatusCode::UNKNOWN,
+                            "failed to write to client stream");
+      }
+    }
+  }
+
 private:
   void broadcastMessage(const std::string &author, const std::string &content) {
     chat::InformClientsNewMessageResponse payload;
@@ -206,9 +272,26 @@ private:
     message_cv_.notify_all();
   }
 
+  void broadcastClientEvent(
+      const std::string &pseudonym,
+      chat::ClientEventData_ClientEventType eventType) {
+    chat::ClientEventData payload;
+    payload.set_pseudonym(pseudonym);
+    payload.set_eventtype(eventType);
+
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      client_events_.push_back(payload);
+    }
+
+    client_event_cv_.notify_all();
+  }
+
   std::mutex mutex_;
   std::condition_variable message_cv_;
   std::vector<chat::InformClientsNewMessageResponse> message_history_;
+  std::condition_variable client_event_cv_;
+  std::vector<chat::ClientEventData> client_events_;
   std::unordered_map<std::string, ClientInfo> clients_;
 };
 

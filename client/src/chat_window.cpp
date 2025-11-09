@@ -1,9 +1,13 @@
 #include "chat_window.h"
 
+#include <QAbstractItemView>
+#include <QComboBox>
 #include <QDateTime>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QListWidgetItem>
 #include <QMessageBox>
 #include <QMetaObject>
 #include <QPushButton>
@@ -35,7 +39,10 @@ ChatWindow::ChatWindow(QWidget *parent)
   layout->addWidget(stacked_);
 }
 
-ChatWindow::~ChatWindow() { stopMessageStream(); }
+ChatWindow::~ChatWindow() {
+  stopMessageStream();
+  stopClientEventStream();
+}
 
 QWidget *ChatWindow::createLoginView() {
   auto *widget = new QWidget(this);
@@ -48,15 +55,17 @@ QWidget *ChatWindow::createLoginView() {
   formLayout->setFormAlignment(Qt::AlignTop);
 
   pseudonymInput_ = new QLineEdit(widget);
-  pseudonymInput_->setPlaceholderText("John");
+  pseudonymInput_->setText("John");
   formLayout->addRow("Pseudonym:", pseudonymInput_);
 
-  genderInput_ = new QLineEdit(widget);
-  genderInput_->setPlaceholderText("Male");
+  genderInput_ = new QComboBox(widget);
+  genderInput_->addItem("Male");
+  genderInput_->addItem("Female");
+  genderInput_->setCurrentText("Male");
   formLayout->addRow("Gender:", genderInput_);
 
   countryInput_ = new QLineEdit(widget);
-  countryInput_->setPlaceholderText("France");
+  countryInput_->setText("France");
   formLayout->addRow("Country:", countryInput_);
 
   layout->addLayout(formLayout);
@@ -79,12 +88,26 @@ QWidget *ChatWindow::createChatView() {
   layout->setContentsMargins(12, 12, 12, 12);
   layout->setSpacing(8);
 
+  auto *contentLayout = new QHBoxLayout();
+  contentLayout->setContentsMargins(0, 0, 0, 0);
+  contentLayout->setSpacing(8);
+
   conversation_ = new QTextBrowser(widget);
   conversation_->setReadOnly(true);
   conversation_->setPlaceholderText("Conversation will appear here...");
   conversation_->setOpenExternalLinks(true);
+  contentLayout->addWidget(conversation_, 3);
 
-  layout->addWidget(conversation_, 1);
+  clientsList_ = new QListWidget(widget);
+  clientsList_->setSelectionMode(QAbstractItemView::SingleSelection);
+  clientsList_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  clientsList_->setSortingEnabled(true);
+  clientsList_->setUniformItemSizes(true);
+  clientsList_->setToolTip("Connected chatters");
+  clientsList_->setMinimumWidth(160);
+  contentLayout->addWidget(clientsList_, 1);
+
+  layout->addLayout(contentLayout, 1);
 
   input_ = new QLineEdit(widget);
   input_->setPlaceholderText("Type a message and press Enter...");
@@ -101,6 +124,15 @@ QWidget *ChatWindow::createChatView() {
 
   connect(sendButton_, &QPushButton::clicked, this, [this]() { handleSend(); });
   connect(input_, &QLineEdit::returnPressed, this, [this]() { handleSend(); });
+  connect(clientsList_, &QListWidget::itemClicked, this,
+          [this](QListWidgetItem *item) {
+            if (!item) {
+              return;
+            }
+            addMessage("System",
+                       QStringLiteral("Selected %1 (private chat TBD).")
+                           .arg(item->text()));
+          });
 
   return widget;
 }
@@ -140,7 +172,7 @@ void ChatWindow::handleSend() {
 
 void ChatWindow::handleConnect() {
   const auto pseudonym = pseudonymInput_->text().trimmed();
-  const auto gender = genderInput_->text().trimmed();
+  const auto gender = genderInput_->currentText().trimmed();
   const auto country = countryInput_->text().trimmed();
 
   if (pseudonym.isEmpty() || gender.isEmpty() || country.isEmpty()) {
@@ -180,11 +212,19 @@ void ChatWindow::handleConnect() {
   setWindowTitle(QStringLiteral("Chat Client - %1").arg(pseudonym));
   switchToChatView(QString::fromStdString(result.response.message()));
   startMessageStream();
+  startClientEventStream();
 }
 
 void ChatWindow::switchToChatView(const QString &welcomeMessage) {
   stacked_->setCurrentWidget(chatView_);
   conversation_->clear();
+  if (clientsList_) {
+    clientsList_->clear();
+    addClientToList(pseudonymInput_->text().trimmed());
+    if (clientsList_->count() > 0) {
+      clientsList_->setCurrentRow(0);
+    }
+  }
 
   addMessage("System", QStringLiteral("Connected as %1 from %2")
                            .arg(pseudonymInput_->text().trimmed(),
@@ -195,6 +235,69 @@ void ChatWindow::switchToChatView(const QString &welcomeMessage) {
   }
 
   input_->setFocus();
+}
+
+void ChatWindow::addClientToList(const QString &pseudonym) {
+  if (!clientsList_) {
+    return;
+  }
+
+  const auto trimmed = pseudonym.trimmed();
+  if (trimmed.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < clientsList_->count(); ++i) {
+    auto *item = clientsList_->item(i);
+    if (item &&
+        QString::compare(item->text(), trimmed, Qt::CaseInsensitive) == 0) {
+      item->setText(trimmed);
+      return;
+    }
+  }
+
+  clientsList_->addItem(trimmed);
+}
+
+void ChatWindow::removeClientFromList(const QString &pseudonym) {
+  if (!clientsList_) {
+    return;
+  }
+
+  const auto trimmed = pseudonym.trimmed();
+  if (trimmed.isEmpty()) {
+    return;
+  }
+
+  for (int i = 0; i < clientsList_->count(); ++i) {
+    auto *item = clientsList_->item(i);
+    if (item &&
+        QString::compare(item->text(), trimmed, Qt::CaseInsensitive) == 0) {
+      delete clientsList_->takeItem(i);
+      break;
+    }
+  }
+}
+
+void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
+  const auto pseudonym =
+      QString::fromStdString(eventData.pseudonym()).trimmed();
+  if (pseudonym.isEmpty()) {
+    return;
+  }
+
+  switch (eventData.eventtype()) {
+  case chat::ClientEventData::ADD:
+    addClientToList(pseudonym);
+    addMessage("System", QStringLiteral("%1 joined the chat.").arg(pseudonym));
+    break;
+  case chat::ClientEventData::REMOVE:
+    removeClientFromList(pseudonym);
+    addMessage("System", QStringLiteral("%1 left the chat.").arg(pseudonym));
+    break;
+  default:
+    break;
+  }
 }
 
 void ChatWindow::startMessageStream() {
@@ -231,5 +334,41 @@ void ChatWindow::startMessageStream() {
 void ChatWindow::stopMessageStream() {
   if (grpcClient_) {
     grpcClient_->stopMessageStream();
+  }
+}
+
+void ChatWindow::startClientEventStream() {
+  if (!grpcClient_) {
+    return;
+  }
+
+  stopClientEventStream();
+
+  grpcClient_->startClientEventStream(
+      [this](const chat::ClientEventData &incoming) {
+        const auto eventData = incoming;
+        QMetaObject::invokeMethod(
+            this, [this, eventData]() { handleClientEvent(eventData); },
+            Qt::QueuedConnection);
+      },
+      [this](const std::string &errorText) {
+        if (errorText.empty()) {
+          return;
+        }
+        const auto formatted = QString::fromStdString(errorText);
+        QMetaObject::invokeMethod(
+            this,
+            [this, formatted]() {
+              addMessage("System",
+                         QStringLiteral("Client event stream stopped: %1")
+                             .arg(formatted));
+            },
+            Qt::QueuedConnection);
+      });
+}
+
+void ChatWindow::stopClientEventStream() {
+  if (grpcClient_) {
+    grpcClient_->stopClientEventStream();
   }
 }

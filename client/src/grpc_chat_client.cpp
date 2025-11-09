@@ -13,7 +13,10 @@ GrpcChatClient::GrpcChatClient(std::string serverAddress)
   }
 }
 
-GrpcChatClient::~GrpcChatClient() { stopMessageStream(); }
+GrpcChatClient::~GrpcChatClient() {
+  stopMessageStream();
+  stopClientEventStream();
+}
 
 GrpcChatClient::ConnectResult
 GrpcChatClient::connect(const std::string &pseudonym,
@@ -83,6 +86,51 @@ void GrpcChatClient::stopMessageStream() {
   }
 
   messageStreamContext_.reset();
+}
+
+void GrpcChatClient::startClientEventStream(ClientEventCallback onEvent,
+                                            ErrorCallback onError) {
+  ensureStub();
+  stopClientEventStream();
+
+  clientEventStreamRunning_.store(true);
+  auto context = std::make_shared<grpc::ClientContext>();
+  clientEventStreamContext_ = context;
+
+  clientEventStreamThread_ =
+      std::thread([this, context, onEvent, onError]() {
+        google::protobuf::Empty request;
+        auto reader =
+            stub_->InformClientsClientEvent(context.get(), request);
+        chat::ClientEventData incoming;
+
+        while (clientEventStreamRunning_.load() && reader->Read(&incoming)) {
+          if (onEvent) {
+            onEvent(incoming);
+          }
+        }
+
+        const auto status = reader->Finish();
+        const bool stillRunning =
+            clientEventStreamRunning_.exchange(false);
+
+        if (!status.ok() && stillRunning && onError) {
+          onError(status.error_message());
+        }
+      });
+}
+
+void GrpcChatClient::stopClientEventStream() {
+  const bool wasRunning = clientEventStreamRunning_.exchange(false);
+  if (wasRunning && clientEventStreamContext_) {
+    clientEventStreamContext_->TryCancel();
+  }
+
+  if (clientEventStreamThread_.joinable()) {
+    clientEventStreamThread_.join();
+  }
+
+  clientEventStreamContext_.reset();
 }
 
 void GrpcChatClient::ensureStub() {
