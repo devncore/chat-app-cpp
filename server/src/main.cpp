@@ -212,6 +212,7 @@ public:
                           "peer information missing");
     }
 
+    std::vector<std::string> connectedPseudonyms;
     {
       std::lock_guard<std::mutex> lock(mutex_);
       auto it = clients_.find(peer);
@@ -222,6 +223,24 @@ public:
 
       if (it->second.next_client_event_index > client_events_.size()) {
         it->second.next_client_event_index = client_events_.size();
+      }
+
+      connectedPseudonyms.reserve(clients_.size());
+      for (const auto &entry : clients_) {
+        connectedPseudonyms.emplace_back(entry.second.pseudonym);
+      }
+    }
+
+    if (!connectedPseudonyms.empty()) {
+      chat::ClientEventData initialRoster;
+      initialRoster.set_eventtype(chat::ClientEventData::SYNC);
+      for (const auto &name : connectedPseudonyms) {
+        initialRoster.add_pseudonyms(name);
+      }
+
+      if (!writer->Write(initialRoster)) {
+        return grpc::Status(grpc::StatusCode::UNKNOWN,
+                            "failed to write initial roster");
       }
     }
 
@@ -273,11 +292,20 @@ private:
   }
 
   void broadcastClientEvent(
-      const std::string &pseudonym,
+      const std::vector<std::string> &pseudonyms,
       chat::ClientEventData_ClientEventType eventType) {
     chat::ClientEventData payload;
-    payload.set_pseudonym(pseudonym);
     payload.set_eventtype(eventType);
+
+    for (const auto &name : pseudonyms) {
+      if (!name.empty()) {
+        payload.add_pseudonyms(name);
+      }
+    }
+
+    if (payload.pseudonyms_size() == 0) {
+      return;
+    }
 
     {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -285,6 +313,12 @@ private:
     }
 
     client_event_cv_.notify_all();
+  }
+
+  void broadcastClientEvent(
+      const std::string &pseudonym,
+      chat::ClientEventData_ClientEventType eventType) {
+    broadcastClientEvent(std::vector<std::string>{pseudonym}, eventType);
   }
 
   std::mutex mutex_;

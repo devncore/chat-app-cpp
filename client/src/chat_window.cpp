@@ -14,6 +14,7 @@
 #include <QStackedWidget>
 #include <QString>
 #include <QTextBrowser>
+#include <QStringList>
 #include <QVBoxLayout>
 
 #include "chat.grpc.pb.h"
@@ -237,14 +238,14 @@ void ChatWindow::switchToChatView(const QString &welcomeMessage) {
   input_->setFocus();
 }
 
-void ChatWindow::addClientToList(const QString &pseudonym) {
+bool ChatWindow::addClientToList(const QString &pseudonym) {
   if (!clientsList_) {
-    return;
+    return false;
   }
 
   const auto trimmed = pseudonym.trimmed();
   if (trimmed.isEmpty()) {
-    return;
+    return false;
   }
 
   for (int i = 0; i < clientsList_->count(); ++i) {
@@ -252,21 +253,22 @@ void ChatWindow::addClientToList(const QString &pseudonym) {
     if (item &&
         QString::compare(item->text(), trimmed, Qt::CaseInsensitive) == 0) {
       item->setText(trimmed);
-      return;
+      return false;
     }
   }
 
   clientsList_->addItem(trimmed);
+  return true;
 }
 
-void ChatWindow::removeClientFromList(const QString &pseudonym) {
+bool ChatWindow::removeClientFromList(const QString &pseudonym) {
   if (!clientsList_) {
-    return;
+    return false;
   }
 
   const auto trimmed = pseudonym.trimmed();
   if (trimmed.isEmpty()) {
-    return;
+    return false;
   }
 
   for (int i = 0; i < clientsList_->count(); ++i) {
@@ -274,27 +276,68 @@ void ChatWindow::removeClientFromList(const QString &pseudonym) {
     if (item &&
         QString::compare(item->text(), trimmed, Qt::CaseInsensitive) == 0) {
       delete clientsList_->takeItem(i);
-      break;
+      return true;
     }
   }
+
+  return false;
 }
 
 void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
-  const auto pseudonym =
-      QString::fromStdString(eventData.pseudonym()).trimmed();
-  if (pseudonym.isEmpty()) {
+  if (!clientsList_) {
+    return;
+  }
+
+  QStringList names;
+  names.reserve(eventData.pseudonyms_size());
+  for (const auto &entry : eventData.pseudonyms()) {
+    const auto name = QString::fromStdString(entry).trimmed();
+    if (!name.isEmpty()) {
+      names.append(name);
+    }
+  }
+
+  if (names.isEmpty()) {
     return;
   }
 
   switch (eventData.eventtype()) {
-  case chat::ClientEventData::ADD:
-    addClientToList(pseudonym);
-    addMessage("System", QStringLiteral("%1 joined the chat.").arg(pseudonym));
+  case chat::ClientEventData::ADD: {
+    for (const auto &name : names) {
+      if (addClientToList(name)) {
+        addMessage("System",
+                   QStringLiteral("%1 joined the chat.").arg(name));
+      }
+    }
     break;
-  case chat::ClientEventData::REMOVE:
-    removeClientFromList(pseudonym);
-    addMessage("System", QStringLiteral("%1 left the chat.").arg(pseudonym));
+  }
+  case chat::ClientEventData::REMOVE: {
+    for (const auto &name : names) {
+      if (removeClientFromList(name)) {
+        addMessage("System",
+                   QStringLiteral("%1 left the chat.").arg(name));
+      }
+    }
     break;
+  }
+  case chat::ClientEventData::SYNC: {
+    const auto previousSelection =
+        clientsList_->currentItem() ? clientsList_->currentItem()->text()
+                                    : QString{};
+    clientsList_->clear();
+    for (const auto &name : names) {
+      addClientToList(name);
+    }
+
+    if (!previousSelection.isEmpty()) {
+      const auto matches = clientsList_->findItems(
+          previousSelection, Qt::MatchFixedString | Qt::MatchCaseSensitive);
+      if (!matches.isEmpty()) {
+        clientsList_->setCurrentItem(matches.first());
+      }
+    }
+    break;
+  }
   default:
     break;
   }

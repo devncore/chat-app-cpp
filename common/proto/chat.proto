@@ -17,9 +17,10 @@ message ClientEventData{
   enum ClientEventType {
   ADD = 0;
   REMOVE = 1;
+  SYNC = 2;
   }
 
-  string pseudonym = 1;
+  repeated string pseudonyms = 1;
   ClientEventType eventType = 2;
 }
 

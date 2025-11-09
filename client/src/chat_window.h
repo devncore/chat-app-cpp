@@ -33,8 +33,8 @@ private:
   void handleSend();
   void handleConnect();
   void switchToChatView(const QString &welcomeMessage);
-  void addClientToList(const QString &pseudonym);
-  void removeClientFromList(const QString &pseudonym);
+  bool addClientToList(const QString &pseudonym);
+  bool removeClientFromList(const QString &pseudonym);
   void handleClientEvent(const chat::ClientEventData &eventData);
   void startMessageStream();
   void stopMessageStream();
