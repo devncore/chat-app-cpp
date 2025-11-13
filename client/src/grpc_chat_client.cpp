@@ -19,8 +19,7 @@ GrpcChatClient::~GrpcChatClient() {
 }
 
 GrpcChatClient::ConnectResult
-GrpcChatClient::connect(const std::string &pseudonym,
-                        const std::string &gender,
+GrpcChatClient::connect(const std::string &pseudonym, const std::string &gender,
                         const std::string &country) {
   ensureStub();
 
@@ -34,6 +33,19 @@ GrpcChatClient::connect(const std::string &pseudonym,
   const auto status = stub_->Connect(&context, request, &response);
 
   return {.status = status, .response = response};
+}
+
+grpc::Status GrpcChatClient::disconnect(const std::string &pseudonym) {
+  ensureStub();
+
+  chat::DisconnectRequest request;
+  request.set_pseudonym(pseudonym);
+
+  google::protobuf::Empty response;
+  grpc::ClientContext context;
+  const auto status = stub_->Disconnect(&context, request, &response);
+
+  return status;
 }
 
 grpc::Status GrpcChatClient::sendMessage(const std::string &content) {
@@ -97,27 +109,24 @@ void GrpcChatClient::startClientEventStream(ClientEventCallback onEvent,
   auto context = std::make_shared<grpc::ClientContext>();
   clientEventStreamContext_ = context;
 
-  clientEventStreamThread_ =
-      std::thread([this, context, onEvent, onError]() {
-        google::protobuf::Empty request;
-        auto reader =
-            stub_->InformClientsClientEvent(context.get(), request);
-        chat::ClientEventData incoming;
+  clientEventStreamThread_ = std::thread([this, context, onEvent, onError]() {
+    google::protobuf::Empty request;
+    auto reader = stub_->InformClientsClientEvent(context.get(), request);
+    chat::ClientEventData incoming;
 
-        while (clientEventStreamRunning_.load() && reader->Read(&incoming)) {
-          if (onEvent) {
-            onEvent(incoming);
-          }
-        }
+    while (clientEventStreamRunning_.load() && reader->Read(&incoming)) {
+      if (onEvent) {
+        onEvent(incoming);
+      }
+    }
 
-        const auto status = reader->Finish();
-        const bool stillRunning =
-            clientEventStreamRunning_.exchange(false);
+    const auto status = reader->Finish();
+    const bool stillRunning = clientEventStreamRunning_.exchange(false);
 
-        if (!status.ok() && stillRunning && onError) {
-          onError(status.error_message());
-        }
-      });
+    if (!status.ok() && stillRunning && onError) {
+      onError(status.error_message());
+    }
+  });
 }
 
 void GrpcChatClient::stopClientEventStream() {
@@ -136,8 +145,8 @@ void GrpcChatClient::stopClientEventStream() {
 void GrpcChatClient::ensureStub() {
   std::lock_guard<std::mutex> lock(stubMutex_);
   if (!stub_) {
-    channel_ = grpc::CreateChannel(serverAddress_,
-                                   grpc::InsecureChannelCredentials());
+    channel_ =
+        grpc::CreateChannel(serverAddress_, grpc::InsecureChannelCredentials());
     stub_ = chat::ChatService::NewStub(channel_);
   }
 }

@@ -6,6 +6,7 @@ package chat;
 
 service ChatService {
   rpc Connect(ConnectRequest) returns (ConnectResponse);
+  rpc Disconnect(DisconnectRequest) returns (google.protobuf.Empty);
   rpc InformServerNewMessage(SendMessageRequest) returns (google.protobuf.Empty);
   rpc InformClientsNewMessage(InformClientsNewMessageRequest)
       returns (stream InformClientsNewMessageResponse);
@@ -35,6 +36,10 @@ message ConnectResponse {
   bool accepted = 1;
   string message = 2;
   reserved 3;
+}
+
+message DisconnectRequest {
+  string pseudonym = 1;
 }
 
 message SendMessageRequest {

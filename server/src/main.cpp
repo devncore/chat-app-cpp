@@ -89,8 +89,33 @@ public:
     response->set_message(log_message);
     std::cout << log_message << std::endl;
 
-    broadcastClientEvent(request->pseudonym(),
-                         chat::ClientEventData::ADD);
+    broadcastClientEvent(request->pseudonym(), chat::ClientEventData::ADD);
+
+    return grpc::Status::OK;
+  }
+
+  grpc::Status Disconnect(grpc::ServerContext *context,
+                          const chat::DisconnectRequest *request,
+                          google::protobuf::Empty *response) override {
+    if (request == nullptr || request->pseudonym().empty()) {
+      return grpc::Status::OK;
+    }
+
+    const std::string peer_address = context ? context->peer() : std::string{};
+    if (peer_address.empty()) {
+      return grpc::Status::OK;
+    }
+
+    // erase client from the map and in all remaining clients
+    if (auto findResult = std::find_if(clients_.begin(), clients_.end(),
+                                       [&](const auto &client) {
+                                         return client.second.pseudonym ==
+                                                request->pseudonym();
+                                       });
+        findResult != clients_.end()) {
+      clients_.erase(findResult);
+      broadcastClientEvent(request->pseudonym(), chat::ClientEventData::REMOVE);
+    }
 
     return grpc::Status::OK;
   }
@@ -212,6 +237,7 @@ public:
                           "peer information missing");
     }
 
+    // initial clients list sent to freshly connected client
     std::vector<std::string> connectedPseudonyms;
     {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -231,6 +257,7 @@ public:
       }
     }
 
+    // prepare and send grpc frame based on 'connectedPseudonyms' vector
     if (!connectedPseudonyms.empty()) {
       chat::ClientEventData initialRoster;
       initialRoster.set_eventtype(chat::ClientEventData::SYNC);
@@ -244,6 +271,7 @@ public:
       }
     }
 
+    // loop which give client updates on each new connection
     using namespace std::chrono_literals;
     while (true) {
       chat::ClientEventData nextEvent;
@@ -291,9 +319,8 @@ private:
     message_cv_.notify_all();
   }
 
-  void broadcastClientEvent(
-      const std::vector<std::string> &pseudonyms,
-      chat::ClientEventData_ClientEventType eventType) {
+  void broadcastClientEvent(const std::vector<std::string> &pseudonyms,
+                            chat::ClientEventData_ClientEventType eventType) {
     chat::ClientEventData payload;
     payload.set_eventtype(eventType);
 
@@ -315,9 +342,8 @@ private:
     client_event_cv_.notify_all();
   }
 
-  void broadcastClientEvent(
-      const std::string &pseudonym,
-      chat::ClientEventData_ClientEventType eventType) {
+  void broadcastClientEvent(const std::string &pseudonym,
+                            chat::ClientEventData_ClientEventType eventType) {
     broadcastClientEvent(std::vector<std::string>{pseudonym}, eventType);
   }
 

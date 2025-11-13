@@ -12,6 +12,7 @@ class QListWidget;
 class QPushButton;
 class QStackedWidget;
 class QTextBrowser;
+class QCloseEvent;
 
 class GrpcChatClient;
 
@@ -25,6 +26,9 @@ class ChatWindow : public QWidget {
 public:
   explicit ChatWindow(QWidget *parent = nullptr);
   ~ChatWindow() override;
+
+protected:
+  void closeEvent(QCloseEvent *event) override;
 
 private:
   QWidget *createLoginView();

@@ -1,9 +1,11 @@
 #include "chat_window.h"
 
 #include <QAbstractItemView>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDateTime>
 #include <QFormLayout>
+#include <QDebug>
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QListWidget>
@@ -13,8 +15,8 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QString>
-#include <QTextBrowser>
 #include <QStringList>
+#include <QTextBrowser>
 #include <QVBoxLayout>
 
 #include "chat.grpc.pb.h"
@@ -43,6 +45,30 @@ ChatWindow::ChatWindow(QWidget *parent)
 ChatWindow::~ChatWindow() {
   stopMessageStream();
   stopClientEventStream();
+}
+
+void ChatWindow::closeEvent(QCloseEvent *event) {
+  const QString pseudonym =
+      pseudonymInput_ ? pseudonymInput_->text().trimmed() : QString{};
+
+  if (grpcClient_) {
+    stopMessageStream();
+    stopClientEventStream();
+
+    if (!pseudonym.isEmpty()) {
+      const auto status = grpcClient_->disconnect(pseudonym.toStdString());
+      if (!status.ok()) {
+        qWarning() << QStringLiteral(
+                          "Failed to send disconnect frame for %1: %2")
+                          .arg(pseudonym,
+                               QString::fromStdString(status.error_message()));
+      }
+    }
+  }
+
+  connected_ = false;
+
+  QWidget::closeEvent(event);
 }
 
 QWidget *ChatWindow::createLoginView() {
@@ -305,8 +331,7 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
   case chat::ClientEventData::ADD: {
     for (const auto &name : names) {
       if (addClientToList(name)) {
-        addMessage("System",
-                   QStringLiteral("%1 joined the chat.").arg(name));
+        addMessage("System", QStringLiteral("%1 joined the chat.").arg(name));
       }
     }
     break;
@@ -314,16 +339,15 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
   case chat::ClientEventData::REMOVE: {
     for (const auto &name : names) {
       if (removeClientFromList(name)) {
-        addMessage("System",
-                   QStringLiteral("%1 left the chat.").arg(name));
+        addMessage("System", QStringLiteral("%1 left the chat.").arg(name));
       }
     }
     break;
   }
   case chat::ClientEventData::SYNC: {
-    const auto previousSelection =
-        clientsList_->currentItem() ? clientsList_->currentItem()->text()
-                                    : QString{};
+    const auto previousSelection = clientsList_->currentItem()
+                                       ? clientsList_->currentItem()->text()
+                                       : QString{};
     clientsList_->clear();
     for (const auto &name : names) {
       addClientToList(name);

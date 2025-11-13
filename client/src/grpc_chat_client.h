@@ -3,9 +3,9 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
-#include <mutex>
 
 #include <grpcpp/grpcpp.h>
 
@@ -33,6 +33,8 @@ public:
 
   ConnectResult connect(const std::string &pseudonym, const std::string &gender,
                         const std::string &country);
+
+  grpc::Status disconnect(const std::string &pseudonym);
 
   grpc::Status sendMessage(const std::string &content);
 
