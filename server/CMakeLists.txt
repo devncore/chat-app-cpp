@@ -5,7 +5,14 @@ project(ChatServer LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_AUTOMOC ON)
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+endif()
+
+find_package(Qt6 REQUIRED COMPONENTS Core Sql)
 find_package(Protobuf REQUIRED)
 find_package(gRPC REQUIRED)
 
@@ -61,9 +68,12 @@ target_include_directories(chat_proto
 
 add_executable(chat_server
     src/main.cpp
+    src/database_manager.cpp
 )
 
 target_link_libraries(chat_server
     PRIVATE
         chat_proto
+        Qt6::Core
+        Qt6::Sql
 )

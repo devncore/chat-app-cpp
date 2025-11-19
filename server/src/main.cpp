@@ -1,5 +1,7 @@
 #include <grpcpp/grpcpp.h>
 
+#include <QCoreApplication>
+#include <QThread>
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
@@ -12,6 +14,7 @@
 #include <vector>
 
 #include "chat.grpc.pb.h"
+#include "database_manager.hpp"
 #include <format>
 #include <google/protobuf/empty.pb.h>
 
@@ -25,6 +28,8 @@ struct ClientInfo {
 
 class ChatServiceImpl final : public chat::ChatService::Service {
 public:
+  ChatServiceImpl(std::shared_ptr<database::DatabaseManager> db) : db_(db) {}
+
   grpc::Status Connect(grpc::ServerContext *context,
                        const chat::ConnectRequest *request,
                        chat::ConnectResponse *response) override {
@@ -89,6 +94,10 @@ public:
     response->set_message(log_message);
     std::cout << log_message << std::endl;
 
+    // update statistics db table
+    emit db_->clientConnectionEvent(request->pseudonym());
+
+    // grpc client broadcast
     broadcastClientEvent(request->pseudonym(), chat::ClientEventData::ADD);
 
     return grpc::Status::OK;
@@ -156,6 +165,8 @@ public:
               << std::endl;
 
     broadcastMessage(pseudonym, request->content());
+
+    emit db_->incrementTxMessage(pseudonym); // db update
 
     return grpc::Status::OK;
   }
@@ -353,24 +364,51 @@ private:
   std::condition_variable client_event_cv_;
   std::vector<chat::ClientEventData> client_events_;
   std::unordered_map<std::string, ClientInfo> clients_;
+  std::shared_ptr<database::DatabaseManager> db_;
 };
 
-int main() {
-  const std::string server_address{"0.0.0.0:50051"};
-  ChatServiceImpl service;
+int main(int argc, char **argv) {
 
-  grpc::ServerBuilder builder;
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  builder.RegisterService(&service);
+  QCoreApplication app(argc, argv);
 
-  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-  if (!server) {
-    std::cerr << "Failed to start gRPC server." << std::endl;
-    return 1;
-  }
+  // instanciate db thread
+  auto dbThread = std::make_unique<QThread>();
+  auto dbMgr = std::make_shared<database::DatabaseManager>();
+  dbMgr->moveToThread(dbThread.get());
+  dbThread->start();
 
-  std::cout << "Server listening on " << server_address << std::endl;
-  server->Wait();
+  // initialize DB inside the thread
+  QMetaObject::invokeMethod(dbMgr.get(), "init", Qt::QueuedConnection);
+  QMetaObject::invokeMethod(dbMgr.get(), "printStatisticsTableContent",
+                            Qt::QueuedConnection);
 
-  return 0;
+  // grpc thread configuration, instanciation and start
+  std::thread grpcThread([dbMgrLambda = dbMgr]() {
+    const std::string server_address{"0.0.0.0:50051"};
+    ChatServiceImpl service(dbMgrLambda);
+    grpc::ServerBuilder builder;
+    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.RegisterService(&service);
+
+    std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+    if (!server) {
+      std::cerr << "Failed to start gRPC server." << std::endl;
+      return 1;
+    }
+
+    std::cout << "Server listening on " << server_address << std::endl;
+    server->Wait();
+
+    return 0;
+  });
+
+  // run Qt event loop (handles queued calls to DatabaseManager)
+  int ret = app.exec();
+
+  // clean-up
+  grpcThread.join();
+  dbThread->quit();
+  dbThread->wait();
+
+  return ret;
 }
