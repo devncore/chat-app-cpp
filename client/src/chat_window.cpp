@@ -4,8 +4,8 @@
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDateTime>
-#include <QFormLayout>
 #include <QDebug>
+#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QListWidget>
@@ -164,10 +164,12 @@ QWidget *ChatWindow::createChatView() {
   return widget;
 }
 
-void ChatWindow::addMessage(const QString &author, const QString &message) {
+void ChatWindow::addMessage(const QString &author, const QString &message,
+                            QString color) {
   const auto timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
-  const auto formatted = QStringLiteral("<b>%1</b> [%2]: %3")
-                             .arg(author, timestamp, message.toHtmlEscaped());
+  const auto formatted =
+      QStringLiteral("<span style='color: %1;'> <b>%2</b> [%3]: %4 </span>")
+          .arg(color, author, timestamp, message.toHtmlEscaped());
   conversation_->append(formatted);
 }
 
@@ -253,12 +255,14 @@ void ChatWindow::switchToChatView(const QString &welcomeMessage) {
     }
   }
 
-  addMessage("System", QStringLiteral("Connected as %1 from %2")
-                           .arg(pseudonymInput_->text().trimmed(),
-                                countryInput_->text().trimmed()));
+  addMessage("System",
+             QStringLiteral("Connected as %1 from %2")
+                 .arg(pseudonymInput_->text().trimmed(),
+                      countryInput_->text().trimmed()),
+             MESSAGE_COLOR_SYSTEM);
 
   if (!welcomeMessage.trimmed().isEmpty()) {
-    addMessage("Server", welcomeMessage.trimmed());
+    addMessage("Server", welcomeMessage.trimmed(), MESSAGE_COLOR_SYSTEM);
   }
 
   input_->setFocus();
@@ -331,7 +335,8 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
   case chat::ClientEventData::ADD: {
     for (const auto &name : names) {
       if (addClientToList(name)) {
-        addMessage("System", QStringLiteral("%1 joined the chat.").arg(name));
+        addMessage("System", QStringLiteral("%1 joined the chat.").arg(name),
+                   MESSAGE_COLOR_USER_CONNECT);
       }
     }
     break;
@@ -339,7 +344,8 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
   case chat::ClientEventData::REMOVE: {
     for (const auto &name : names) {
       if (removeClientFromList(name)) {
-        addMessage("System", QStringLiteral("%1 left the chat.").arg(name));
+        addMessage("System", QStringLiteral("%1 has left the chat.").arg(name),
+                   MESSAGE_COLOR_USER_DISCONNECT);
       }
     }
     break;

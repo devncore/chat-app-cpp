@@ -31,9 +31,14 @@ protected:
   void closeEvent(QCloseEvent *event) override;
 
 private:
+  static inline QString MESSAGE_COLOR_SYSTEM{"blue"};
+  static inline QString MESSAGE_COLOR_USER_CONNECT{"green"};
+  static inline QString MESSAGE_COLOR_USER_DISCONNECT{"purple"};
+
   QWidget *createLoginView();
   QWidget *createChatView();
-  void addMessage(const QString &author, const QString &message);
+  void addMessage(const QString &author, const QString &message,
+                  QString color = "black");
   void handleSend();
   void handleConnect();
   void switchToChatView(const QString &welcomeMessage);

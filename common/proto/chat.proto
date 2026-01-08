@@ -35,7 +35,7 @@ message ConnectRequest {
 message ConnectResponse {
   bool accepted = 1;
   string message = 2;
-  reserved 3;
+  repeated string previousMessageContext = 3;
 }
 
 message DisconnectRequest {
