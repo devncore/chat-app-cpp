@@ -7,14 +7,12 @@
 
 #include "chat.grpc.pb.h"
 #include "domain/chat_room.hpp"
-
-namespace database {
-class DatabaseManager;
-}
+#include "repository/database_repository.hpp"
 
 class ChatServiceImpl final : public chat::ChatService::Service {
 public:
-  explicit ChatServiceImpl(std::shared_ptr<database::DatabaseManager> db);
+  explicit ChatServiceImpl(
+      std::shared_ptr<database::IDatabaseRepository> db);
 
   grpc::Status Connect(grpc::ServerContext *context,
                        const chat::ConnectRequest *request,
@@ -41,5 +39,5 @@ public:
 
 private:
   domain::ChatRoom chat_room_;
-  std::shared_ptr<database::DatabaseManager> db_;
+  std::shared_ptr<database::IDatabaseRepository> db_;
 };

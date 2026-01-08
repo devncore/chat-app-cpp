@@ -7,9 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "database_manager.hpp"
-
-ChatServiceImpl::ChatServiceImpl(std::shared_ptr<database::DatabaseManager> db)
+ChatServiceImpl::ChatServiceImpl(
+    std::shared_ptr<database::IDatabaseRepository> db)
     : db_(std::move(db)) {}
 
 grpc::Status ChatServiceImpl::Connect(grpc::ServerContext *context,
@@ -37,7 +36,7 @@ grpc::Status ChatServiceImpl::Connect(grpc::ServerContext *context,
   std::cout << result.message << std::endl;
 
   if (result.accepted) {
-    emit db_->clientConnectionEvent(request->pseudonym());
+    db_->clientConnectionEvent(request->pseudonym());
   }
 
   return grpc::Status::OK;
@@ -96,7 +95,7 @@ ChatServiceImpl::InformServerNewMessage(grpc::ServerContext *context,
 
   chat_room_.AddMessage(pseudonym, request->content());
 
-  emit db_->incrementTxMessage(pseudonym);
+  db_->incrementTxMessage(pseudonym);
 
   return grpc::Status::OK;
 }
