@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "tasks": [
     {
       "label": "configure_client",
@@ -26,6 +26,50 @@
       "command": "cmake --build server/build && ./server/build/chat_server",
       "dependsOn": ["configure_server"],
       "detail": "Build and run the Qt server executable"
+    },
+    {
+      "label": "configure_root",
+      "type": "shell",
+      "command": "cmake -S . -B build",
+      "detail": "Configure the root CMake project"
+    },
+    {
+      "label": "build_root",
+      "type": "shell",
+      "command": "cmake --build build",
+      "dependsOn": ["configure_root"],
+      "detail": "Build the root CMake project"
+    },
+    {
+      "label": "run_server_root",
+      "type": "shell",
+      "command": "./build/server/chat_server",
+      "dependsOn": ["build_root"],
+      "detail": "Run the server from the root build"
+    },
+    {
+      "label": "run_client_root_1",
+      "type": "shell",
+      "command": "./build/client/chat_client",
+      "dependsOn": ["build_root"],
+      "detail": "Run the first client from the root build"
+    },
+    {
+      "label": "run_client_root_2",
+      "type": "shell",
+      "command": "./build/client/chat_client",
+      "dependsOn": ["build_root"],
+      "detail": "Run the second client from the root build"
+    },
+    {
+      "label": "build_and_run_server_and_two_clients",
+      "dependsOn": [
+        "run_server_root",
+        "run_client_root_1",
+        "run_client_root_2"
+      ],
+      "dependsOrder": "parallel",
+      "detail": "Build the root CMake project, then run 1 server + 2 clients"
     },
     {
       "label": "clean_all",
