@@ -34,6 +34,19 @@
       "detail": "Configure the root CMake project"
     },
     {
+      "label": "configure_root_compdb",
+      "type": "shell",
+      "command": "cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+      "detail": "Configure the root CMake project with compile_commands.json"
+    },
+    {
+      "label": "clang_tidy",
+      "type": "shell",
+      "command": "run-clang-tidy -p build",
+      "dependsOn": ["configure_root_compdb"],
+      "detail": "Run clang-tidy on the codebase"
+    },
+    {
       "label": "build_root",
       "type": "shell",
       "command": "cmake --build build",

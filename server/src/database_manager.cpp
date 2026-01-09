@@ -23,8 +23,8 @@ void DatabaseManager::init() {
 
   // 3/ create requires tables if not existing
   // Check if table exists
-  if (not db_->tables().contains(STATISTICS_TABLE)) {
-    qDebug() << "Table" << STATISTICS_TABLE << "does not exist, creating...";
+  if (not db_->tables().contains(statisticsTable_)) {
+    qDebug() << "Table" << statisticsTable_ << "does not exist, creating...";
 
     QSqlQuery query;
     QString createSql =
@@ -36,7 +36,7 @@ void DatabaseManager::init() {
             "cumulated_connection_time_sec INTEGER NOT NULL CHECK "
             "(cumulated_connection_time_sec "
             ">= 0));")
-            .arg(STATISTICS_TABLE);
+            .arg(statisticsTable_);
 
     if (!query.exec(createSql)) {
       qCritical() << "Failed to create table:" << query.lastError().text();
@@ -148,7 +148,7 @@ void DatabaseManager::printStatisticsTableContent() {
   const QString selectSql =
       QString("SELECT pseudonym, nb_of_connection, tx_messages, "
               "cumulated_connection_time_sec FROM %1 ORDER BY pseudonym;")
-          .arg(STATISTICS_TABLE);
+          .arg(statisticsTable_);
 
   if (!query.exec(selectSql)) {
     qCritical() << "Failed to read table:" << query.lastError().text();

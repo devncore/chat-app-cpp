@@ -30,8 +30,8 @@ ConnectResult ChatRoom::connectClient(const std::string &peer,
         .pseudonym = pseudonym,
         .gender = gender,
         .country = country,
-        .next_message_index = message_history_.size(),
-        .next_client_event_index = client_events_.size(),
+        .nextMessageIndex = messageHistory_.size(),
+        .nextClientEventIndex = clientEvents_.size(),
     };
 
     auto it = clients_.find(peer);
@@ -95,8 +95,8 @@ bool ChatRoom::normalizeMessageIndex(const std::string &peer) {
     return false;
   }
 
-  if (it->second.next_message_index > message_history_.size()) {
-    it->second.next_message_index = message_history_.size();
+  if (it->second.nextMessageIndex > messageHistory_.size()) {
+    it->second.nextMessageIndex = messageHistory_.size();
   }
   return true;
 }
@@ -108,8 +108,8 @@ bool ChatRoom::normalizeClientEventIndex(const std::string &peer) {
     return false;
   }
 
-  if (it->second.next_client_event_index > client_events_.size()) {
-    it->second.next_client_event_index = client_events_.size();
+  if (it->second.nextClientEventIndex > clientEvents_.size()) {
+    it->second.nextClientEventIndex = clientEvents_.size();
   }
   return true;
 }
@@ -122,10 +122,10 @@ void ChatRoom::addMessage(const std::string &author,
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    message_history_.push_back(payload);
+    messageHistory_.push_back(payload);
   }
 
-  message_cv_.notify_all();
+  messageCv_.notify_all();
 }
 
 NextMessageStatus
@@ -138,26 +138,26 @@ ChatRoom::nextMessage(const std::string &peer,
     return NextMessageStatus::kPeerMissing;
   }
 
-  if (it->second.next_message_index < message_history_.size()) {
+  if (it->second.nextMessageIndex < messageHistory_.size()) {
     if (out != nullptr) {
-      *out = message_history_[it->second.next_message_index];
+      *out = messageHistory_[it->second.nextMessageIndex];
     }
-    ++it->second.next_message_index;
+    ++it->second.nextMessageIndex;
     return NextMessageStatus::kOk;
   }
 
-  message_cv_.wait_for(lock, waitFor);
+  messageCv_.wait_for(lock, waitFor);
 
   it = clients_.find(peer);
   if (it == clients_.end()) {
     return NextMessageStatus::kPeerMissing;
   }
 
-  if (it->second.next_message_index < message_history_.size()) {
+  if (it->second.nextMessageIndex < messageHistory_.size()) {
     if (out != nullptr) {
-      *out = message_history_[it->second.next_message_index];
+      *out = messageHistory_[it->second.nextMessageIndex];
     }
-    ++it->second.next_message_index;
+    ++it->second.nextMessageIndex;
     return NextMessageStatus::kOk;
   }
 
@@ -176,8 +176,8 @@ bool ChatRoom::getInitialRoster(const std::string &peer,
     return false;
   }
 
-  if (it->second.next_client_event_index > client_events_.size()) {
-    it->second.next_client_event_index = client_events_.size();
+  if (it->second.nextClientEventIndex > clientEvents_.size()) {
+    it->second.nextClientEventIndex = clientEvents_.size();
   }
 
   out->clear();
@@ -198,26 +198,26 @@ ChatRoom::nextClientEvent(const std::string &peer,
     return NextClientEventStatus::kPeerMissing;
   }
 
-  if (it->second.next_client_event_index < client_events_.size()) {
+  if (it->second.nextClientEventIndex < clientEvents_.size()) {
     if (out != nullptr) {
-      *out = client_events_[it->second.next_client_event_index];
+      *out = clientEvents_[it->second.nextClientEventIndex];
     }
-    ++it->second.next_client_event_index;
+    ++it->second.nextClientEventIndex;
     return NextClientEventStatus::kOk;
   }
 
-  client_event_cv_.wait_for(lock, waitFor);
+  clientEventCv_.wait_for(lock, waitFor);
 
   it = clients_.find(peer);
   if (it == clients_.end()) {
     return NextClientEventStatus::kPeerMissing;
   }
 
-  if (it->second.next_client_event_index < client_events_.size()) {
+  if (it->second.nextClientEventIndex < clientEvents_.size()) {
     if (out != nullptr) {
-      *out = client_events_[it->second.next_client_event_index];
+      *out = clientEvents_[it->second.nextClientEventIndex];
     }
-    ++it->second.next_client_event_index;
+    ++it->second.nextClientEventIndex;
     return NextClientEventStatus::kOk;
   }
 
@@ -242,10 +242,10 @@ void ChatRoom::broadcastClientEvent(
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    client_events_.push_back(payload);
+    clientEvents_.push_back(payload);
   }
 
-  client_event_cv_.notify_all();
+  clientEventCv_.notify_all();
 }
 
 void ChatRoom::broadcastClientEvent(

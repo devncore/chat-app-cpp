@@ -263,10 +263,10 @@ void ChatWindow::switchToChatView(const QString &welcomeMessage) {
              QStringLiteral("Connected as %1 from %2")
                  .arg(pseudonymInput_->text().trimmed(),
                       countryInput_->text().trimmed()),
-             MESSAGE_COLOR_SYSTEM);
+             MESSAGE_COLOR_SYSTEM_);
 
   if (!welcomeMessage.trimmed().isEmpty()) {
-    addMessage("Server", welcomeMessage.trimmed(), MESSAGE_COLOR_SYSTEM);
+    addMessage("Server", welcomeMessage.trimmed(), MESSAGE_COLOR_SYSTEM_);
   }
 
   input_->setFocus();
@@ -340,7 +340,7 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
     for (const auto &name : names) {
       if (addClientToList(name)) {
         addMessage("System", QStringLiteral("%1 joined the chat.").arg(name),
-                   MESSAGE_COLOR_USER_CONNECT);
+                   MESSAGE_COLOR_USER_CONNECT_);
       }
     }
     break;
@@ -349,7 +349,7 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
     for (const auto &name : names) {
       if (removeClientFromList(name)) {
         addMessage("System", QStringLiteral("%1 has left the chat.").arg(name),
-                   MESSAGE_COLOR_USER_DISCONNECT);
+                   MESSAGE_COLOR_USER_DISCONNECT_);
       }
     }
     break;

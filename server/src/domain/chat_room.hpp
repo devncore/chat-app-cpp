@@ -15,8 +15,8 @@ struct ClientInfo {
   std::string pseudonym;
   std::string gender;
   std::string country;
-  std::size_t next_message_index{0};
-  std::size_t next_client_event_index{0};
+  std::size_t nextMessageIndex{0};
+  std::size_t nextClientEventIndex{0};
 };
 
 struct ConnectResult {
@@ -70,10 +70,10 @@ private:
                             chat::ClientEventData_ClientEventType eventType);
 
   std::mutex mutex_;
-  std::condition_variable message_cv_;
-  std::vector<chat::InformClientsNewMessageResponse> message_history_;
-  std::condition_variable client_event_cv_;
-  std::vector<chat::ClientEventData> client_events_;
+  std::condition_variable messageCv_;
+  std::vector<chat::InformClientsNewMessageResponse> messageHistory_;
+  std::condition_variable clientEventCv_;
+  std::vector<chat::ClientEventData> clientEvents_;
   std::unordered_map<std::string, ClientInfo> clients_;
 };
 

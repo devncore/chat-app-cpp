@@ -37,6 +37,6 @@ public:
       grpc::ServerWriter<chat::ClientEventData> *writer) override;
 
 private:
-  domain::ChatRoom chat_room_;
+  domain::ChatRoom chatRoom_;
   std::shared_ptr<database::IDatabaseRepository> db_;
 };

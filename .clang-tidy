@@ -1,0 +1,44 @@
+Checks: >
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  readability-*,
+  modernize-*,
+  portability-*,
+  misc-*,
+  -bugprone-easily-swappable-parameters,
+  -modernize-use-auto,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -modernize-concat-nested-namespaces,
+  -readability-magic-numbers,
+  -readability-function-size,
+  -readability-identifier-length
+HeaderFilterRegex: '.*(client|server|common)/.*'
+WarningsAsErrors: ''
+FormatStyle: file
+CheckOptions:
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.MethodCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberCase
+    value: camelBack
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: _
+  - key: readability-identifier-naming.StaticMemberCase
+    value: UPPER_CASE

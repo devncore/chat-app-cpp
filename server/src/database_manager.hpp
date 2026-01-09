@@ -19,7 +19,7 @@ public slots:
   void printStatisticsTableContent() override;
 
 private:
-  const QString STATISTICS_TABLE = "Statistics";
+  const QString statisticsTable_ = "Statistics";
   std::unique_ptr<QSqlDatabase> db_;
 };
 } // namespace database
