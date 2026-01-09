@@ -9,14 +9,14 @@
 
 #include <google/protobuf/empty.pb.h>
 
-#include "chat_session.hpp"
+#include "chat_client_session.hpp"
 
-class GrpcChatClient : public IChatSession {
+class GrpcChatClient : public ChatClientSession {
 public:
-  using IChatSession::ClientEventCallback;
-  using IChatSession::ConnectResult;
-  using IChatSession::ErrorCallback;
-  using IChatSession::MessageCallback;
+  using ChatClientSession::ClientEventCallback;
+  using ChatClientSession::ConnectResult;
+  using ChatClientSession::ErrorCallback;
+  using ChatClientSession::MessageCallback;
 
   explicit GrpcChatClient(std::string serverAddress);
   ~GrpcChatClient();

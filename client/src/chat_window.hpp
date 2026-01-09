@@ -15,7 +15,7 @@ class QStackedWidget;
 class QTextBrowser;
 class QCloseEvent;
 
-class IChatSession;
+class ChatClientSession;
 
 namespace chat {
 class ClientEventData;
@@ -26,7 +26,7 @@ class ChatWindow : public QWidget {
 
 public:
   explicit ChatWindow(QString serverAddress,
-                      std::unique_ptr<IChatSession> chatSession,
+                      std::unique_ptr<ChatClientSession> chatSession,
                       QWidget *parent = nullptr);
   ~ChatWindow() override;
 
@@ -67,5 +67,5 @@ private:
   bool connected_{false};
   QString serverAddress_;
 
-  std::unique_ptr<IChatSession> chatSession_;
+  std::unique_ptr<ChatClientSession> chatSession_;
 };

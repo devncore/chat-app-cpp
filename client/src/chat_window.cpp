@@ -22,10 +22,10 @@
 #include <utility>
 
 #include "chat.grpc.pb.h"
-#include "chat_session.hpp"
+#include "chat_client_session.hpp"
 
 ChatWindow::ChatWindow(QString serverAddress,
-                       std::unique_ptr<IChatSession> chatSession,
+                       std::unique_ptr<ChatClientSession> chatSession,
                        QWidget *parent)
     : QWidget(parent), stacked_(new QStackedWidget(this)),
       serverAddress_(std::move(serverAddress)),
@@ -335,7 +335,7 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
     return;
   }
 
-  switch (eventData.eventtype()) {
+  switch (eventData.event_type()) {
   case chat::ClientEventData::ADD: {
     for (const auto &name : names) {
       if (addClientToList(name)) {

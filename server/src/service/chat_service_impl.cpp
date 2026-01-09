@@ -1,4 +1,4 @@
-#include "service/chat_service.hpp"
+#include "service/chat_service_impl.hpp"
 
 #include <chrono>
 #include <format>
@@ -28,7 +28,7 @@ grpc::Status ChatServiceImpl::Connect(grpc::ServerContext *context,
   }
 
   const domain::ConnectResult result =
-      chat_room_.ConnectClient(peerAddress, request->pseudonym(),
+      chat_room_.connectClient(peerAddress, request->pseudonym(),
                                request->gender(), request->country());
 
   response->set_accepted(result.accepted);
@@ -58,7 +58,7 @@ grpc::Status ChatServiceImpl::Disconnect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  chat_room_.DisconnectClient(pseudonym);
+  chat_room_.disconnectClient(pseudonym);
 
   std::cout << "'" + pseudonym + "' is disconnected" << std::endl;
 
@@ -80,7 +80,7 @@ grpc::Status ChatServiceImpl::SendMessage(
   }
 
   std::string pseudonym;
-  if (!chat_room_.GetPseudonymForPeer(peer, &pseudonym)) {
+  if (!chat_room_.getPseudonymForPeer(peer, &pseudonym)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
@@ -92,7 +92,7 @@ grpc::Status ChatServiceImpl::SendMessage(
   std::cout << std::format("[{}] {}", pseudonym, request->content())
             << std::endl;
 
-  chat_room_.AddMessage(pseudonym, request->content());
+  chat_room_.addMessage(pseudonym, request->content());
 
   db_->incrementTxMessage(pseudonym);
 
@@ -114,7 +114,7 @@ grpc::Status ChatServiceImpl::SubscribeMessages(
                         "peer information missing");
   }
 
-  if (!chat_room_.NormalizeMessageIndex(peer)) {
+  if (!chat_room_.normalizeMessageIndex(peer)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
@@ -127,7 +127,7 @@ grpc::Status ChatServiceImpl::SubscribeMessages(
 
     chat::InformClientsNewMessageResponse nextMessage;
     const domain::NextMessageStatus status =
-        chat_room_.NextMessage(peer, 200ms, &nextMessage);
+        chat_room_.nextMessage(peer, 200ms, &nextMessage);
 
     if (status == domain::NextMessageStatus::kPeerMissing) {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
@@ -161,14 +161,14 @@ grpc::Status ChatServiceImpl::SubscribeClientEvents(
   }
 
   std::vector<std::string> connectedPseudonyms;
-  if (!chat_room_.GetInitialRoster(peer, &connectedPseudonyms)) {
+  if (!chat_room_.getInitialRoster(peer, &connectedPseudonyms)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
 
   if (!connectedPseudonyms.empty()) {
     chat::ClientEventData initialRoster;
-    initialRoster.set_eventtype(chat::ClientEventData::SYNC);
+    initialRoster.set_event_type(chat::ClientEventData::SYNC);
     for (const auto &name : connectedPseudonyms) {
       initialRoster.add_pseudonyms(name);
     }
@@ -187,7 +187,7 @@ grpc::Status ChatServiceImpl::SubscribeClientEvents(
 
     chat::ClientEventData nextEvent;
     const domain::NextClientEventStatus status =
-        chat_room_.NextClientEvent(peer, 200ms, &nextEvent);
+        chat_room_.nextClientEvent(peer, 200ms, &nextEvent);
 
     if (status == domain::NextClientEventStatus::kPeerMissing) {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,

@@ -38,35 +38,35 @@ enum class NextClientEventStatus {
 
 class ChatRoom {
 public:
-  ConnectResult ConnectClient(const std::string &peer,
+  ConnectResult connectClient(const std::string &peer,
                               const std::string &pseudonym,
                               const std::string &gender,
                               const std::string &country);
 
-  bool DisconnectClient(const std::string &pseudonym);
+  bool disconnectClient(const std::string &pseudonym);
 
-  bool GetPseudonymForPeer(const std::string &peer, std::string *pseudonym);
+  bool getPseudonymForPeer(const std::string &peer, std::string *pseudonym);
 
-  bool NormalizeMessageIndex(const std::string &peer);
-  bool NormalizeClientEventIndex(const std::string &peer);
+  bool normalizeMessageIndex(const std::string &peer);
+  bool normalizeClientEventIndex(const std::string &peer);
 
-  void AddMessage(const std::string &author, const std::string &content);
+  void addMessage(const std::string &author, const std::string &content);
 
-  NextMessageStatus NextMessage(
+  NextMessageStatus nextMessage(
       const std::string &peer, std::chrono::milliseconds waitFor,
       chat::InformClientsNewMessageResponse *out);
 
-  bool GetInitialRoster(const std::string &peer,
+  bool getInitialRoster(const std::string &peer,
                         std::vector<std::string> *out);
 
   NextClientEventStatus
-  NextClientEvent(const std::string &peer, std::chrono::milliseconds waitFor,
+  nextClientEvent(const std::string &peer, std::chrono::milliseconds waitFor,
                   chat::ClientEventData *out);
 
 private:
-  void BroadcastClientEvent(const std::vector<std::string> &pseudonyms,
+  void broadcastClientEvent(const std::vector<std::string> &pseudonyms,
                             chat::ClientEventData_ClientEventType eventType);
-  void BroadcastClientEvent(const std::string &pseudonym,
+  void broadcastClientEvent(const std::string &pseudonym,
                             chat::ClientEventData_ClientEventType eventType);
 
   std::mutex mutex_;

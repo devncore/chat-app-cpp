@@ -24,7 +24,7 @@ add_executable(chat_server
     src/main.cpp
     src/database_manager.cpp
     src/domain/chat_room.cpp
-    src/service/chat_service.cpp
+    src/service/chat_service_impl.cpp
 )
 
 target_include_directories(chat_server

@@ -9,7 +9,7 @@
 #include <thread>
 
 #include "database_manager.hpp"
-#include "service/chat_service.hpp"
+#include "service/chat_service_impl.hpp"
 
 int main(int argc, char **argv) {
 

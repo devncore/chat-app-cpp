@@ -23,7 +23,7 @@ message ClientEventData{
   }
 
   repeated string pseudonyms = 1;
-  ClientEventType eventType = 2;
+  ClientEventType event_type = 2;
 }
 
 message ConnectRequest {
@@ -36,7 +36,7 @@ message ConnectRequest {
 message ConnectResponse {
   bool accepted = 1;
   string message = 2;
-  repeated string previousMessageContext = 3;
+  repeated string previous_message_context = 3;
 }
 
 message DisconnectRequest {
