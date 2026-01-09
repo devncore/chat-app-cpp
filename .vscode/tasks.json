@@ -76,6 +76,12 @@
       "type": "shell",
       "command": "rm -rf client/build server/build",
       "detail": "Remove all build artifacts"
+    },
+    {
+      "label": "generate_doxygen",
+      "type": "shell",
+      "command": "mkdir -p docs/doxygen && doxygen Doxyfile",
+      "detail": "Generate Doxygen documentation"
     }
   ]
 }
