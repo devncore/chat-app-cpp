@@ -2,15 +2,8 @@
 
 #include <utility>
 
-namespace {
-constexpr char kDefaultServerAddress[] = "localhost:50051";
-}
-
 GrpcChatClient::GrpcChatClient(std::string serverAddress)
     : serverAddress_(std::move(serverAddress)) {
-  if (serverAddress_.empty()) {
-    serverAddress_ = kDefaultServerAddress;
-  }
 }
 
 GrpcChatClient::~GrpcChatClient() {

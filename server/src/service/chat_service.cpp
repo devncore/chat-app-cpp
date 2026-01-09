@@ -20,15 +20,15 @@ grpc::Status ChatServiceImpl::Connect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  const std::string peer_address = context ? context->peer() : std::string{};
-  if (peer_address.empty()) {
+  const std::string peerAddress = context ? context->peer() : std::string{};
+  if (peerAddress.empty()) {
     response->set_accepted(false);
     response->set_message("peer information is required");
     return grpc::Status::OK;
   }
 
   const domain::ConnectResult result =
-      chat_room_.ConnectClient(peer_address, request->pseudonym(),
+      chat_room_.ConnectClient(peerAddress, request->pseudonym(),
                                request->gender(), request->country());
 
   response->set_accepted(result.accepted);
@@ -53,8 +53,8 @@ grpc::Status ChatServiceImpl::Disconnect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  const std::string peer_address = context ? context->peer() : std::string{};
-  if (peer_address.empty()) {
+  const std::string peerAddress = context ? context->peer() : std::string{};
+  if (peerAddress.empty()) {
     return grpc::Status::OK;
   }
 

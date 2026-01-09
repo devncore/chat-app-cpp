@@ -19,15 +19,14 @@
 #include <QTextBrowser>
 #include <QVBoxLayout>
 
+#include <utility>
+
 #include "chat.grpc.pb.h"
 #include "grpc_chat_client.h"
 
-namespace {
-constexpr char kServerAddress[] = "localhost:50051";
-}
-
-ChatWindow::ChatWindow(QWidget *parent)
-    : QWidget(parent), stacked_(new QStackedWidget(this)) {
+ChatWindow::ChatWindow(QString serverAddress, QWidget *parent)
+    : QWidget(parent), stacked_(new QStackedWidget(this)),
+      serverAddress_(std::move(serverAddress)) {
   setWindowTitle("Chat Client");
   resize(480, 480);
 
@@ -212,7 +211,8 @@ void ChatWindow::handleConnect() {
   }
 
   if (!grpcClient_) {
-    grpcClient_ = std::make_unique<GrpcChatClient>(kServerAddress);
+    grpcClient_ =
+        std::make_unique<GrpcChatClient>(serverAddress_.toStdString());
   }
 
   connectButton_->setEnabled(false);
@@ -225,8 +225,7 @@ void ChatWindow::handleConnect() {
   if (!result.status.ok()) {
     QMessageBox::critical(
         this, "Connection failed",
-        QStringLiteral("Unable to connect to %1.\n%2")
-            .arg(QString::fromUtf8(kServerAddress))
+        QStringLiteral("Unable to connect to %1.\n%2").arg(serverAddress_)
             .arg(QString::fromStdString(result.status.error_message())));
     return;
   }

@@ -53,21 +53,21 @@ public:
   void AddMessage(const std::string &author, const std::string &content);
 
   NextMessageStatus NextMessage(
-      const std::string &peer, std::chrono::milliseconds wait_for,
+      const std::string &peer, std::chrono::milliseconds waitFor,
       chat::InformClientsNewMessageResponse *out);
 
   bool GetInitialRoster(const std::string &peer,
                         std::vector<std::string> *out);
 
   NextClientEventStatus
-  NextClientEvent(const std::string &peer, std::chrono::milliseconds wait_for,
+  NextClientEvent(const std::string &peer, std::chrono::milliseconds waitFor,
                   chat::ClientEventData *out);
 
 private:
   void BroadcastClientEvent(const std::vector<std::string> &pseudonyms,
-                            chat::ClientEventData_ClientEventType event_type);
+                            chat::ClientEventData_ClientEventType eventType);
   void BroadcastClientEvent(const std::string &pseudonym,
-                            chat::ClientEventData_ClientEventType event_type);
+                            chat::ClientEventData_ClientEventType eventType);
 
   std::mutex mutex_;
   std::condition_variable message_cv_;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <QString>
 
 #include <memory>
 #include <string>
@@ -24,7 +25,7 @@ class ChatWindow : public QWidget {
   Q_OBJECT
 
 public:
-  explicit ChatWindow(QWidget *parent = nullptr);
+  explicit ChatWindow(QString serverAddress, QWidget *parent = nullptr);
   ~ChatWindow() override;
 
 protected:
@@ -62,6 +63,7 @@ private:
   QLineEdit *input_;
   QPushButton *sendButton_;
   bool connected_{false};
+  QString serverAddress_;
 
   std::unique_ptr<GrpcChatClient> grpcClient_;
 };

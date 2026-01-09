@@ -20,7 +20,7 @@ public:
       std::function<void(const chat::ClientEventData &)>;
   using ErrorCallback = std::function<void(const std::string &)>;
 
-  explicit GrpcChatClient(std::string serverAddress = "localhost:50051");
+  explicit GrpcChatClient(std::string serverAddress);
   ~GrpcChatClient();
 
   GrpcChatClient(const GrpcChatClient &) = delete;

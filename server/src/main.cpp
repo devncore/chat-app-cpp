@@ -1,6 +1,7 @@
 #include <grpcpp/grpcpp.h>
 
 #include <QCoreApplication>
+#include <QCommandLineParser>
 #include <QThread>
 #include <iostream>
 #include <memory>
@@ -14,6 +15,18 @@ int main(int argc, char **argv) {
 
   QCoreApplication app(argc, argv);
 
+  QCommandLineParser parser;
+  parser.setApplicationDescription("Chat gRPC server");
+  parser.addHelpOption();
+  QCommandLineOption listenOption(
+      {"l", "listen", "server"}, "gRPC listen address (host:port).", "address",
+      "0.0.0.0:50051");
+  parser.addOption(listenOption);
+  parser.process(app);
+
+  const std::string serverAddress =
+      parser.value(listenOption).toStdString();
+
   // instanciate db thread
   auto dbThread = std::make_unique<QThread>();
   auto dbMgr = std::make_shared<database::DatabaseManager>();
@@ -26,11 +39,10 @@ int main(int argc, char **argv) {
                             Qt::QueuedConnection);
 
   // grpc thread configuration, instanciation and start
-  std::thread grpcThread([dbMgrLambda = dbMgr]() {
-    const std::string server_address{"0.0.0.0:50051"};
+  std::thread grpcThread([dbMgrLambda = dbMgr, serverAddress]() {
     ChatServiceImpl service(dbMgrLambda);
     grpc::ServerBuilder builder;
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.AddListeningPort(serverAddress, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
 
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
@@ -39,7 +51,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    std::cout << "Server listening on " << server_address << std::endl;
+    std::cout << "Server listening on " << serverAddress << std::endl;
     server->Wait();
 
     return 0;

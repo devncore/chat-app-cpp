@@ -9,21 +9,21 @@ ConnectResult ChatRoom::ConnectClient(const std::string &peer,
                                       const std::string &pseudonym,
                                       const std::string &gender,
                                       const std::string &country) {
-  std::string log_message;
-  bool should_broadcast = false;
+  std::string logMessage;
+  bool shouldBroadcast = false;
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    const bool pseudonym_in_use =
+    const bool pseudonymInUse =
         std::any_of(clients_.cbegin(), clients_.cend(),
                     [&pseudonym, &peer](const auto &entry) {
                       return entry.first != peer &&
                              entry.second.pseudonym == pseudonym;
                     });
-    if (pseudonym_in_use) {
-      log_message = "The pseudo you are using is already in use, please "
-                    "choose another one";
-      return {false, log_message};
+    if (pseudonymInUse) {
+      logMessage = "The pseudo you are using is already in use, please "
+                   "choose another one";
+      return {false, logMessage};
     }
 
     ClientInfo info{
@@ -37,20 +37,20 @@ ConnectResult ChatRoom::ConnectClient(const std::string &peer,
     auto it = clients_.find(peer);
     if (it != clients_.end()) {
       it->second = std::move(info);
-      log_message = "Client already registered for peer '" + peer +
-                    "' override info.";
+      logMessage =
+          "Client already registered for peer '" + peer + "' override info.";
     } else {
       clients_.emplace(peer, std::move(info));
-      log_message = "New client '" + pseudonym + "' is now connected";
+      logMessage = "New client '" + pseudonym + "' is now connected";
     }
-    should_broadcast = true;
+    shouldBroadcast = true;
   }
 
-  if (should_broadcast) {
+  if (shouldBroadcast) {
     BroadcastClientEvent(pseudonym, chat::ClientEventData::ADD);
   }
 
-  return {true, log_message};
+  return {true, logMessage};
 }
 
 bool ChatRoom::DisconnectClient(const std::string &pseudonym) {
@@ -130,7 +130,7 @@ void ChatRoom::AddMessage(const std::string &author,
 
 NextMessageStatus
 ChatRoom::NextMessage(const std::string &peer,
-                      std::chrono::milliseconds wait_for,
+                      std::chrono::milliseconds waitFor,
                       chat::InformClientsNewMessageResponse *out) {
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = clients_.find(peer);
@@ -146,7 +146,7 @@ ChatRoom::NextMessage(const std::string &peer,
     return NextMessageStatus::kOk;
   }
 
-  message_cv_.wait_for(lock, wait_for);
+  message_cv_.wait_for(lock, waitFor);
 
   it = clients_.find(peer);
   if (it == clients_.end()) {
@@ -190,7 +190,7 @@ bool ChatRoom::GetInitialRoster(const std::string &peer,
 
 NextClientEventStatus
 ChatRoom::NextClientEvent(const std::string &peer,
-                          std::chrono::milliseconds wait_for,
+                          std::chrono::milliseconds waitFor,
                           chat::ClientEventData *out) {
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = clients_.find(peer);
@@ -206,7 +206,7 @@ ChatRoom::NextClientEvent(const std::string &peer,
     return NextClientEventStatus::kOk;
   }
 
-  client_event_cv_.wait_for(lock, wait_for);
+  client_event_cv_.wait_for(lock, waitFor);
 
   it = clients_.find(peer);
   if (it == clients_.end()) {
@@ -226,9 +226,9 @@ ChatRoom::NextClientEvent(const std::string &peer,
 
 void ChatRoom::BroadcastClientEvent(
     const std::vector<std::string> &pseudonyms,
-    chat::ClientEventData_ClientEventType event_type) {
+    chat::ClientEventData_ClientEventType eventType) {
   chat::ClientEventData payload;
-  payload.set_eventtype(event_type);
+  payload.set_eventtype(eventType);
 
   for (const auto &name : pseudonyms) {
     if (!name.empty()) {
@@ -250,8 +250,8 @@ void ChatRoom::BroadcastClientEvent(
 
 void ChatRoom::BroadcastClientEvent(
     const std::string &pseudonym,
-    chat::ClientEventData_ClientEventType event_type) {
-  BroadcastClientEvent(std::vector<std::string>{pseudonym}, event_type);
+    chat::ClientEventData_ClientEventType eventType) {
+  BroadcastClientEvent(std::vector<std::string>{pseudonym}, eventType);
 }
 
 } // namespace domain

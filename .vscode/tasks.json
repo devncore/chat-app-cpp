@@ -10,7 +10,7 @@
     {
       "label": "build_and_run_client",
       "type": "shell",
-      "command": "cmake --build client/build && ./client/build/chat_client",
+      "command": "cmake --build client/build && ./client/build/chat_client --server=localhost:50051",
       "dependsOn": ["configure_client"],
       "detail": "Build and run the Qt client executable"
     },
@@ -23,7 +23,7 @@
     {
       "label": "build_and_run_server",
       "type": "shell",
-      "command": "cmake --build server/build && ./server/build/chat_server",
+      "command": "cmake --build server/build && ./server/build/chat_server --listen=0.0.0.0:50051",
       "dependsOn": ["configure_server"],
       "detail": "Build and run the Qt server executable"
     },
@@ -43,21 +43,21 @@
     {
       "label": "run_server_root",
       "type": "shell",
-      "command": "./build/server/chat_server",
+      "command": "./build/server/chat_server --listen=0.0.0.0:50051",
       "dependsOn": ["build_root"],
       "detail": "Run the server from the root build"
     },
     {
       "label": "run_client_root_1",
       "type": "shell",
-      "command": "./build/client/chat_client",
+      "command": "./build/client/chat_client --server=localhost:50051",
       "dependsOn": ["build_root"],
       "detail": "Run the first client from the root build"
     },
     {
       "label": "run_client_root_2",
       "type": "shell",
-      "command": "./build/client/chat_client",
+      "command": "./build/client/chat_client --server=localhost:50051",
       "dependsOn": ["build_root"],
       "detail": "Run the second client from the root build"
     },
