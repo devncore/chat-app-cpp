@@ -23,9 +23,9 @@ public:
   using ChatClientSession::ErrorCallback;
   using ChatClientSession::MessageCallback;
 
-  explicit GrpcChatClient(std::string serverAddress);
+  explicit GrpcChatClient(std::string serverAddress,QObject *parent = nullptr);
   ~GrpcChatClient() override;
-
+  
   GrpcChatClient(const GrpcChatClient &) = delete;
   GrpcChatClient &operator=(const GrpcChatClient &) = delete;
 

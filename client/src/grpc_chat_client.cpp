@@ -3,8 +3,9 @@
 #include <qobject.h>
 #include <utility>
 
-GrpcChatClient::GrpcChatClient(std::string serverAddress)
-    :serverAddress_(std::move(serverAddress)) {
+GrpcChatClient::GrpcChatClient(std::string serverAddress,QObject *parent)
+    :QObject(parent)
+    ,serverAddress_(std::move(serverAddress)) {
 }
 
 GrpcChatClient::~GrpcChatClient() {
