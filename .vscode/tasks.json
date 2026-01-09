@@ -47,6 +47,12 @@
       "detail": "Run clang-tidy on the codebase"
     },
     {
+      "label": "clang_format_all",
+      "type": "shell",
+      "command": "git ls-files \"*.c\" \"*.cc\" \"*.cxx\" \"*.cpp\" \"*.h\" \"*.hh\" \"*.hpp\" \"*.hxx\" | xargs clang-format -i",
+      "detail": "Run clang-format on all tracked C/C++ sources"
+    },
+    {
       "label": "build_root",
       "type": "shell",
       "command": "cmake --build build",

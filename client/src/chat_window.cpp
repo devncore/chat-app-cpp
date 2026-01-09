@@ -199,10 +199,10 @@ void ChatWindow::onConnectFinished(bool ok, const QString &errorText,
   connectButton_->setEnabled(true);
 
   if (!ok) {
-    QMessageBox::critical(
-        this, "Connection failed",
-        QStringLiteral("Unable to connect to %1.\n%2").arg(serverAddress_)
-            .arg(errorText));
+    QMessageBox::critical(this, "Connection failed",
+                          QStringLiteral("Unable to connect to %1.\n%2")
+                              .arg(serverAddress_)
+                              .arg(errorText));
     return;
   }
 
@@ -224,8 +224,8 @@ void ChatWindow::onDisconnectFinished(bool ok, const QString &errorText) {
     return;
   }
 
-  qWarning() << QStringLiteral("Failed to send disconnect frame: %1")
-                    .arg(errorText);
+  qWarning()
+      << QStringLiteral("Failed to send disconnect frame: %1").arg(errorText);
 }
 
 void ChatWindow::onSendMessageFinished(bool ok, const QString &errorText) {
@@ -383,13 +383,9 @@ void ChatWindow::handleClientEvent(int eventType,
   }
 }
 
-void ChatWindow::startMessageStream() {
-  emit startMessageStreamRequested();
-}
+void ChatWindow::startMessageStream() { emit startMessageStreamRequested(); }
 
-void ChatWindow::stopMessageStream() {
-  emit stopMessageStreamRequested();
-}
+void ChatWindow::stopMessageStream() { emit stopMessageStreamRequested(); }
 
 void ChatWindow::startClientEventStream() {
   emit startClientEventStreamRequested();

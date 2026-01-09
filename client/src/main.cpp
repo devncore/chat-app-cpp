@@ -4,8 +4,7 @@
 #include "chat_window.hpp"
 #include "grpc_chat_client.hpp"
 
-static QString getServerAddressFromArguments(const QApplication& app)
-{
+static QString getServerAddressFromArguments(const QApplication &app) {
   QCommandLineParser parser;
   parser.setApplicationDescription("Chat gRPC client");
   parser.addHelpOption();
@@ -26,8 +25,8 @@ int main(int argc, char *argv[]) {
 
   // instanciate grpc & chat client components
   ChatWindow window(serverAddress);
-  GrpcChatClient* grpcChatClient =
-      new GrpcChatClient(serverAddress.toStdString(),&window);
+  GrpcChatClient *grpcChatClient =
+      new GrpcChatClient(serverAddress.toStdString(), &window);
 
   // signals UI -> grpcgrpcChatClient
   QObject::connect(&window, &ChatWindow::connectRequested, grpcChatClient,

@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include <grpcpp/grpcpp.h>
 #include <google/protobuf/empty.pb.h>
+#include <grpcpp/grpcpp.h>
 
 #include "chat.grpc.pb.h"
 #include "domain/chat_room.hpp"
@@ -11,8 +11,7 @@
 
 class ChatServiceImpl final : public chat::ChatService::Service {
 public:
-  explicit ChatServiceImpl(
-      std::shared_ptr<database::IDatabaseRepository> db);
+  explicit ChatServiceImpl(std::shared_ptr<database::IDatabaseRepository> db);
 
   grpc::Status Connect(grpc::ServerContext *context,
                        const chat::ConnectRequest *request,
@@ -26,11 +25,11 @@ public:
                            const chat::SendMessageRequest *request,
                            google::protobuf::Empty *response) override;
 
-  grpc::Status SubscribeMessages(
-      grpc::ServerContext *context,
-      const chat::InformClientsNewMessageRequest *request,
-      grpc::ServerWriter<chat::InformClientsNewMessageResponse> *writer)
-      override;
+  grpc::Status
+  SubscribeMessages(grpc::ServerContext *context,
+                    const chat::InformClientsNewMessageRequest *request,
+                    grpc::ServerWriter<chat::InformClientsNewMessageResponse>
+                        *writer) override;
 
   grpc::Status SubscribeClientEvents(
       grpc::ServerContext *context, const google::protobuf::Empty *request,

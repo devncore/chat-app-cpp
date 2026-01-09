@@ -3,10 +3,8 @@
 #include <qobject.h>
 #include <utility>
 
-GrpcChatClient::GrpcChatClient(std::string serverAddress,QObject *parent)
-    :QObject(parent)
-    ,serverAddress_(std::move(serverAddress)) {
-}
+GrpcChatClient::GrpcChatClient(std::string serverAddress, QObject *parent)
+    : QObject(parent), serverAddress_(std::move(serverAddress)) {}
 
 GrpcChatClient::~GrpcChatClient() {
   stopMessageStream();
@@ -58,9 +56,7 @@ void GrpcChatClient::startMessageStreamSlot() {
       });
 }
 
-void GrpcChatClient::stopMessageStreamSlot() {
-  stopMessageStream();
-}
+void GrpcChatClient::stopMessageStreamSlot() { stopMessageStream(); }
 
 void GrpcChatClient::startClientEventStreamSlot() {
   startClientEventStream(
@@ -84,9 +80,7 @@ void GrpcChatClient::startClientEventStreamSlot() {
       });
 }
 
-void GrpcChatClient::stopClientEventStreamSlot() {
-  stopClientEventStream();
-}
+void GrpcChatClient::stopClientEventStreamSlot() { stopClientEventStream(); }
 
 GrpcChatClient::ConnectResult
 GrpcChatClient::connect(const std::string &pseudonym, const std::string &gender,

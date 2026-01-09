@@ -13,6 +13,7 @@ if(CCACHE_PROGRAM)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Sql)
+find_package(Boost REQUIRED COMPONENTS program_options)
 
 if(NOT TARGET chat_proto)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common
@@ -35,6 +36,7 @@ target_include_directories(chat_server
 target_link_libraries(chat_server
     PRIVATE
         chat_proto
+        Boost::program_options
         Qt6::Core
         Qt6::Sql
 )

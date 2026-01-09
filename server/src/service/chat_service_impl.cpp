@@ -27,9 +27,8 @@ grpc::Status ChatServiceImpl::Connect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  const domain::ConnectResult result =
-      chatRoom_.connectClient(peerAddress, request->pseudonym(),
-                              request->gender(), request->country());
+  const domain::ConnectResult result = chatRoom_.connectClient(
+      peerAddress, request->pseudonym(), request->gender(), request->country());
 
   response->set_accepted(result.accepted);
   response->set_message(result.message);
@@ -65,9 +64,10 @@ grpc::Status ChatServiceImpl::Disconnect(grpc::ServerContext *context,
   return grpc::Status::OK;
 }
 
-grpc::Status ChatServiceImpl::SendMessage(
-    grpc::ServerContext *context, const chat::SendMessageRequest *request,
-    google::protobuf::Empty *response) {
+grpc::Status
+ChatServiceImpl::SendMessage(grpc::ServerContext *context,
+                             const chat::SendMessageRequest *request,
+                             google::protobuf::Empty *response) {
   if (request == nullptr || request->content().empty()) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
                         "message content is required");

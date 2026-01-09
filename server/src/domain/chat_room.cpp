@@ -14,12 +14,11 @@ ConnectResult ChatRoom::connectClient(const std::string &peer,
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    const bool pseudonymInUse =
-        std::any_of(clients_.cbegin(), clients_.cend(),
-                    [&pseudonym, &peer](const auto &entry) {
-                      return entry.first != peer &&
-                             entry.second.pseudonym == pseudonym;
-                    });
+    const bool pseudonymInUse = std::any_of(
+        clients_.cbegin(), clients_.cend(),
+        [&pseudonym, &peer](const auto &entry) {
+          return entry.first != peer && entry.second.pseudonym == pseudonym;
+        });
     if (pseudonymInUse) {
       logMessage = "The pseudo you are using is already in use, please "
                    "choose another one";

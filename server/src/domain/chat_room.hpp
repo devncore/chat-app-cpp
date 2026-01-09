@@ -52,16 +52,15 @@ public:
 
   void addMessage(const std::string &author, const std::string &content);
 
-  NextMessageStatus nextMessage(
-      const std::string &peer, std::chrono::milliseconds waitFor,
-      chat::InformClientsNewMessageResponse *out);
+  NextMessageStatus nextMessage(const std::string &peer,
+                                std::chrono::milliseconds waitFor,
+                                chat::InformClientsNewMessageResponse *out);
 
-  bool getInitialRoster(const std::string &peer,
-                        std::vector<std::string> *out);
+  bool getInitialRoster(const std::string &peer, std::vector<std::string> *out);
 
-  NextClientEventStatus
-  nextClientEvent(const std::string &peer, std::chrono::milliseconds waitFor,
-                  chat::ClientEventData *out);
+  NextClientEventStatus nextClientEvent(const std::string &peer,
+                                        std::chrono::milliseconds waitFor,
+                                        chat::ClientEventData *out);
 
 private:
   void broadcastClientEvent(const std::vector<std::string> &pseudonyms,
