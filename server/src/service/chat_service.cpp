@@ -65,10 +65,9 @@ grpc::Status ChatServiceImpl::Disconnect(grpc::ServerContext *context,
   return grpc::Status::OK;
 }
 
-grpc::Status
-ChatServiceImpl::InformServerNewMessage(grpc::ServerContext *context,
-                                        const chat::SendMessageRequest *request,
-                                        google::protobuf::Empty *response) {
+grpc::Status ChatServiceImpl::SendMessage(
+    grpc::ServerContext *context, const chat::SendMessageRequest *request,
+    google::protobuf::Empty *response) {
   if (request == nullptr || request->content().empty()) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
                         "message content is required");
@@ -100,7 +99,7 @@ ChatServiceImpl::InformServerNewMessage(grpc::ServerContext *context,
   return grpc::Status::OK;
 }
 
-grpc::Status ChatServiceImpl::InformClientsNewMessage(
+grpc::Status ChatServiceImpl::SubscribeMessages(
     grpc::ServerContext *context,
     const chat::InformClientsNewMessageRequest *request,
     grpc::ServerWriter<chat::InformClientsNewMessageResponse> *writer) {
@@ -146,7 +145,7 @@ grpc::Status ChatServiceImpl::InformClientsNewMessage(
   }
 }
 
-grpc::Status ChatServiceImpl::InformClientsClientEvent(
+grpc::Status ChatServiceImpl::SubscribeClientEvents(
     grpc::ServerContext *context, const google::protobuf::Empty *request,
     grpc::ServerWriter<chat::ClientEventData> *writer) {
   (void)request;

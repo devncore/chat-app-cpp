@@ -48,7 +48,7 @@ grpc::Status GrpcChatClient::sendMessage(const std::string &content) {
 
   grpc::ClientContext context;
   google::protobuf::Empty response;
-  return stub_->InformServerNewMessage(&context, request, &response);
+  return stub_->SendMessage(&context, request, &response);
 }
 
 void GrpcChatClient::startMessageStream(MessageCallback onMessage,
@@ -62,7 +62,7 @@ void GrpcChatClient::startMessageStream(MessageCallback onMessage,
 
   messageStreamThread_ = std::thread([this, context, onMessage, onError]() {
     chat::InformClientsNewMessageRequest request;
-    auto reader = stub_->InformClientsNewMessage(context.get(), request);
+    auto reader = stub_->SubscribeMessages(context.get(), request);
     chat::InformClientsNewMessageResponse incoming;
 
     while (messageStreamRunning_.load() && reader->Read(&incoming)) {
@@ -104,7 +104,7 @@ void GrpcChatClient::startClientEventStream(ClientEventCallback onEvent,
 
   clientEventStreamThread_ = std::thread([this, context, onEvent, onError]() {
     google::protobuf::Empty request;
-    auto reader = stub_->InformClientsClientEvent(context.get(), request);
+    auto reader = stub_->SubscribeClientEvents(context.get(), request);
     chat::ClientEventData incoming;
 
     while (clientEventStreamRunning_.load() && reader->Read(&incoming)) {

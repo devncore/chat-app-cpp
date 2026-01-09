@@ -22,18 +22,17 @@ public:
                           const chat::DisconnectRequest *request,
                           google::protobuf::Empty *response) override;
 
-  grpc::Status
-  InformServerNewMessage(grpc::ServerContext *context,
-                         const chat::SendMessageRequest *request,
-                         google::protobuf::Empty *response) override;
+  grpc::Status SendMessage(grpc::ServerContext *context,
+                           const chat::SendMessageRequest *request,
+                           google::protobuf::Empty *response) override;
 
-  grpc::Status InformClientsNewMessage(
+  grpc::Status SubscribeMessages(
       grpc::ServerContext *context,
       const chat::InformClientsNewMessageRequest *request,
       grpc::ServerWriter<chat::InformClientsNewMessageResponse> *writer)
       override;
 
-  grpc::Status InformClientsClientEvent(
+  grpc::Status SubscribeClientEvents(
       grpc::ServerContext *context, const google::protobuf::Empty *request,
       grpc::ServerWriter<chat::ClientEventData> *writer) override;
 

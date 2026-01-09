@@ -7,10 +7,11 @@ package chat;
 service ChatService {
   rpc Connect(ConnectRequest) returns (ConnectResponse);
   rpc Disconnect(DisconnectRequest) returns (google.protobuf.Empty);
-  rpc InformServerNewMessage(SendMessageRequest) returns (google.protobuf.Empty);
-  rpc InformClientsNewMessage(InformClientsNewMessageRequest)
+  rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
+  rpc SubscribeMessages(InformClientsNewMessageRequest)
       returns (stream InformClientsNewMessageResponse);
-  rpc InformClientsClientEvent(google.protobuf.Empty) returns (stream ClientEventData);
+  rpc SubscribeClientEvents(google.protobuf.Empty)
+      returns (stream ClientEventData);
 }
 
 message ClientEventData{
