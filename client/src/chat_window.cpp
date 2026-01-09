@@ -1,4 +1,4 @@
-#include "chat_window.h"
+#include "chat_window.hpp"
 
 #include <QAbstractItemView>
 #include <QCloseEvent>
@@ -22,11 +22,14 @@
 #include <utility>
 
 #include "chat.grpc.pb.h"
-#include "grpc_chat_client.h"
+#include "chat_session.hpp"
 
-ChatWindow::ChatWindow(QString serverAddress, QWidget *parent)
+ChatWindow::ChatWindow(QString serverAddress,
+                       std::unique_ptr<IChatSession> chatSession,
+                       QWidget *parent)
     : QWidget(parent), stacked_(new QStackedWidget(this)),
-      serverAddress_(std::move(serverAddress)) {
+      serverAddress_(std::move(serverAddress)),
+      chatSession_(std::move(chatSession)) {
   setWindowTitle("Chat Client");
   resize(480, 480);
 
@@ -50,12 +53,12 @@ void ChatWindow::closeEvent(QCloseEvent *event) {
   const QString pseudonym =
       pseudonymInput_ ? pseudonymInput_->text().trimmed() : QString{};
 
-  if (grpcClient_) {
+  if (chatSession_) {
     stopMessageStream();
     stopClientEventStream();
 
     if (!pseudonym.isEmpty()) {
-      const auto status = grpcClient_->disconnect(pseudonym.toStdString());
+      const auto status = chatSession_->disconnect(pseudonym.toStdString());
       if (!status.ok()) {
         qWarning() << QStringLiteral(
                           "Failed to send disconnect frame for %1: %2")
@@ -185,13 +188,13 @@ void ChatWindow::handleSend() {
 
   input_->clear();
 
-  if (!grpcClient_) {
+  if (!chatSession_) {
     QMessageBox::warning(this, "Client not ready",
                          "The gRPC client is not ready yet. Try reconnecting.");
     return;
   }
 
-  const auto status = grpcClient_->sendMessage(text.toStdString());
+  const auto status = chatSession_->sendMessage(text.toStdString());
   if (!status.ok()) {
     QMessageBox::warning(this, "Send failed",
                          QString::fromStdString(status.error_message()));
@@ -210,14 +213,16 @@ void ChatWindow::handleConnect() {
     return;
   }
 
-  if (!grpcClient_) {
-    grpcClient_ =
-        std::make_unique<GrpcChatClient>(serverAddress_.toStdString());
+  if (!chatSession_) {
+    QMessageBox::warning(
+        this, "Client not ready",
+        "The gRPC client is not ready yet. Try restarting the application.");
+    return;
   }
 
   connectButton_->setEnabled(false);
 
-  const auto result = grpcClient_->connect(
+  const auto result = chatSession_->connect(
       pseudonym.toStdString(), gender.toStdString(), country.toStdString());
 
   connectButton_->setEnabled(true);
@@ -373,13 +378,13 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
 }
 
 void ChatWindow::startMessageStream() {
-  if (!grpcClient_) {
+  if (!chatSession_) {
     return;
   }
 
   stopMessageStream();
 
-  grpcClient_->startMessageStream(
+  chatSession_->startMessageStream(
       [this](const chat::InformClientsNewMessageResponse &incoming) {
         const auto author = QString::fromStdString(incoming.author());
         const auto content = QString::fromStdString(incoming.content());
@@ -404,19 +409,19 @@ void ChatWindow::startMessageStream() {
 }
 
 void ChatWindow::stopMessageStream() {
-  if (grpcClient_) {
-    grpcClient_->stopMessageStream();
+  if (chatSession_) {
+    chatSession_->stopMessageStream();
   }
 }
 
 void ChatWindow::startClientEventStream() {
-  if (!grpcClient_) {
+  if (!chatSession_) {
     return;
   }
 
   stopClientEventStream();
 
-  grpcClient_->startClientEventStream(
+  chatSession_->startClientEventStream(
       [this](const chat::ClientEventData &incoming) {
         const auto eventData = incoming;
         QMetaObject::invokeMethod(
@@ -440,7 +445,7 @@ void ChatWindow::startClientEventStream() {
 }
 
 void ChatWindow::stopClientEventStream() {
-  if (grpcClient_) {
-    grpcClient_->stopClientEventStream();
+  if (chatSession_) {
+    chatSession_->stopClientEventStream();
   }
 }

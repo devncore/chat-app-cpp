@@ -1,4 +1,4 @@
-#include "grpc_chat_client.h"
+#include "grpc_chat_client.hpp"
 
 #include <utility>
 

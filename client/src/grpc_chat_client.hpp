@@ -7,18 +7,16 @@
 #include <string>
 #include <thread>
 
-#include <grpcpp/grpcpp.h>
-
-#include "chat.grpc.pb.h"
 #include <google/protobuf/empty.pb.h>
 
-class GrpcChatClient {
+#include "chat_session.hpp"
+
+class GrpcChatClient : public IChatSession {
 public:
-  using MessageCallback =
-      std::function<void(const chat::InformClientsNewMessageResponse &)>;
-  using ClientEventCallback =
-      std::function<void(const chat::ClientEventData &)>;
-  using ErrorCallback = std::function<void(const std::string &)>;
+  using IChatSession::ClientEventCallback;
+  using IChatSession::ConnectResult;
+  using IChatSession::ErrorCallback;
+  using IChatSession::MessageCallback;
 
   explicit GrpcChatClient(std::string serverAddress);
   ~GrpcChatClient();
@@ -26,23 +24,19 @@ public:
   GrpcChatClient(const GrpcChatClient &) = delete;
   GrpcChatClient &operator=(const GrpcChatClient &) = delete;
 
-  struct ConnectResult {
-    grpc::Status status;
-    chat::ConnectResponse response;
-  };
-
   ConnectResult connect(const std::string &pseudonym, const std::string &gender,
-                        const std::string &country);
+                        const std::string &country) override;
 
-  grpc::Status disconnect(const std::string &pseudonym);
+  grpc::Status disconnect(const std::string &pseudonym) override;
 
-  grpc::Status sendMessage(const std::string &content);
+  grpc::Status sendMessage(const std::string &content) override;
 
-  void startMessageStream(MessageCallback onMessage, ErrorCallback onError);
-  void stopMessageStream();
+  void startMessageStream(MessageCallback onMessage,
+                          ErrorCallback onError) override;
+  void stopMessageStream() override;
   void startClientEventStream(ClientEventCallback onEvent,
-                              ErrorCallback onError);
-  void stopClientEventStream();
+                              ErrorCallback onError) override;
+  void stopClientEventStream() override;
 
 private:
   void ensureStub();
