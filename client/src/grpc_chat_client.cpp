@@ -1,13 +1,89 @@
 #include "grpc_chat_client.hpp"
 
+#include <qobject.h>
 #include <utility>
 
 GrpcChatClient::GrpcChatClient(std::string serverAddress)
-    : serverAddress_(std::move(serverAddress)) {
+    :serverAddress_(std::move(serverAddress)) {
 }
 
 GrpcChatClient::~GrpcChatClient() {
   stopMessageStream();
+  stopClientEventStream();
+}
+
+void GrpcChatClient::connectToServer(const QString &pseudonym,
+                                     const QString &gender,
+                                     const QString &country) {
+  const auto result = connect(pseudonym.toStdString(), gender.toStdString(),
+                              country.toStdString());
+  const bool ok = result.status.ok();
+  const QString errorText =
+      ok ? QString{} : QString::fromStdString(result.status.error_message());
+  const QString message = QString::fromStdString(result.response.message());
+
+  emit connectFinished(ok, errorText, result.response.accepted(), message);
+}
+
+void GrpcChatClient::disconnectFromServer(const QString &pseudonym) {
+  const auto status = disconnect(pseudonym.toStdString());
+  const bool ok = status.ok();
+  const QString errorText =
+      ok ? QString{} : QString::fromStdString(status.error_message());
+
+  emit disconnectFinished(ok, errorText);
+}
+
+void GrpcChatClient::sendChatMessage(const QString &content) {
+  const auto status = sendMessage(content.toStdString());
+  const bool ok = status.ok();
+  const QString errorText =
+      ok ? QString{} : QString::fromStdString(status.error_message());
+
+  emit sendMessageFinished(ok, errorText);
+}
+
+void GrpcChatClient::startMessageStreamSlot() {
+  startMessageStream(
+      [this](const chat::InformClientsNewMessageResponse &incoming) {
+        emit messageReceived(QString::fromStdString(incoming.author()),
+                             QString::fromStdString(incoming.content()));
+      },
+      [this](const std::string &errorText) {
+        if (errorText.empty()) {
+          return;
+        }
+        emit messageStreamError(QString::fromStdString(errorText));
+      });
+}
+
+void GrpcChatClient::stopMessageStreamSlot() {
+  stopMessageStream();
+}
+
+void GrpcChatClient::startClientEventStreamSlot() {
+  startClientEventStream(
+      [this](const chat::ClientEventData &incoming) {
+        QStringList names;
+        names.reserve(incoming.pseudonyms_size());
+        for (const auto &entry : incoming.pseudonyms()) {
+          const auto name = QString::fromStdString(entry).trimmed();
+          if (!name.isEmpty()) {
+            names.append(name);
+          }
+        }
+        emit clientEventReceived(static_cast<int>(incoming.event_type()),
+                                 names);
+      },
+      [this](const std::string &errorText) {
+        if (errorText.empty()) {
+          return;
+        }
+        emit clientEventStreamError(QString::fromStdString(errorText));
+      });
+}
+
+void GrpcChatClient::stopClientEventStreamSlot() {
   stopClientEventStream();
 }
 

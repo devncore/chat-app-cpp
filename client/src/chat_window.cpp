@@ -11,7 +11,6 @@
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QMessageBox>
-#include <QMetaObject>
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QString>
@@ -22,14 +21,9 @@
 #include <utility>
 
 #include "chat.grpc.pb.h"
-#include "chat_client_session.hpp"
-
-ChatWindow::ChatWindow(QString serverAddress,
-                       std::unique_ptr<ChatClientSession> chatSession,
-                       QWidget *parent)
+ChatWindow::ChatWindow(QString serverAddress, QWidget *parent)
     : QWidget(parent), stacked_(new QStackedWidget(this)),
-      serverAddress_(std::move(serverAddress)),
-      chatSession_(std::move(chatSession)) {
+      serverAddress_(std::move(serverAddress)) {
   setWindowTitle("Chat Client");
   resize(480, 480);
 
@@ -53,19 +47,11 @@ void ChatWindow::closeEvent(QCloseEvent *event) {
   const QString pseudonym =
       pseudonymInput_ ? pseudonymInput_->text().trimmed() : QString{};
 
-  if (chatSession_) {
-    stopMessageStream();
-    stopClientEventStream();
+  stopMessageStream();
+  stopClientEventStream();
 
-    if (!pseudonym.isEmpty()) {
-      const auto status = chatSession_->disconnect(pseudonym.toStdString());
-      if (!status.ok()) {
-        qWarning() << QStringLiteral(
-                          "Failed to send disconnect frame for %1: %2")
-                          .arg(pseudonym,
-                               QString::fromStdString(status.error_message()));
-      }
-    }
+  if (!pseudonym.isEmpty()) {
+    emit disconnectRequested(pseudonym);
   }
 
   connected_ = false;
@@ -188,17 +174,7 @@ void ChatWindow::handleSend() {
 
   input_->clear();
 
-  if (!chatSession_) {
-    QMessageBox::warning(this, "Client not ready",
-                         "The gRPC client is not ready yet. Try reconnecting.");
-    return;
-  }
-
-  const auto status = chatSession_->sendMessage(text.toStdString());
-  if (!status.ok()) {
-    QMessageBox::warning(this, "Send failed",
-                         QString::fromStdString(status.error_message()));
-  }
+  emit sendMessageRequested(text);
 }
 
 void ChatWindow::handleConnect() {
@@ -213,39 +189,77 @@ void ChatWindow::handleConnect() {
     return;
   }
 
-  if (!chatSession_) {
-    QMessageBox::warning(
-        this, "Client not ready",
-        "The gRPC client is not ready yet. Try restarting the application.");
-    return;
-  }
-
   connectButton_->setEnabled(false);
 
-  const auto result = chatSession_->connect(
-      pseudonym.toStdString(), gender.toStdString(), country.toStdString());
+  emit connectRequested(pseudonym, gender, country);
+}
 
+void ChatWindow::onConnectFinished(bool ok, const QString &errorText,
+                                   bool accepted, const QString &message) {
   connectButton_->setEnabled(true);
 
-  if (!result.status.ok()) {
+  if (!ok) {
     QMessageBox::critical(
         this, "Connection failed",
         QStringLiteral("Unable to connect to %1.\n%2").arg(serverAddress_)
-            .arg(QString::fromStdString(result.status.error_message())));
+            .arg(errorText));
     return;
   }
 
-  if (!result.response.accepted()) {
-    QMessageBox::warning(this, "Connection rejected",
-                         QString::fromStdString(result.response.message()));
+  if (!accepted) {
+    QMessageBox::warning(this, "Connection rejected", message);
     return;
   }
 
   connected_ = true;
-  setWindowTitle(QStringLiteral("Chat Client - %1").arg(pseudonym));
-  switchToChatView(QString::fromStdString(result.response.message()));
+  setWindowTitle(QStringLiteral("Chat Client - %1")
+                     .arg(pseudonymInput_->text().trimmed()));
+  switchToChatView(message);
   startMessageStream();
   startClientEventStream();
+}
+
+void ChatWindow::onDisconnectFinished(bool ok, const QString &errorText) {
+  if (ok || errorText.isEmpty()) {
+    return;
+  }
+
+  qWarning() << QStringLiteral("Failed to send disconnect frame: %1")
+                    .arg(errorText);
+}
+
+void ChatWindow::onSendMessageFinished(bool ok, const QString &errorText) {
+  if (ok || errorText.isEmpty()) {
+    return;
+  }
+
+  QMessageBox::warning(this, "Send failed", errorText);
+}
+
+void ChatWindow::onMessageReceived(const QString &author,
+                                   const QString &content) {
+  addMessage(author, content);
+}
+
+void ChatWindow::onMessageStreamError(const QString &errorText) {
+  if (errorText.isEmpty()) {
+    return;
+  }
+  addMessage("System",
+             QStringLiteral("Message stream stopped: %1").arg(errorText));
+}
+
+void ChatWindow::onClientEventReceived(int eventType,
+                                       const QStringList &pseudonyms) {
+  handleClientEvent(eventType, pseudonyms);
+}
+
+void ChatWindow::onClientEventStreamError(const QString &errorText) {
+  if (errorText.isEmpty()) {
+    return;
+  }
+  addMessage("System",
+             QStringLiteral("Client event stream stopped: %1").arg(errorText));
 }
 
 void ChatWindow::switchToChatView(const QString &welcomeMessage) {
@@ -317,27 +331,19 @@ bool ChatWindow::removeClientFromList(const QString &pseudonym) {
   return false;
 }
 
-void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
+void ChatWindow::handleClientEvent(int eventType,
+                                   const QStringList &pseudonyms) {
   if (!clientsList_) {
     return;
   }
 
-  QStringList names;
-  names.reserve(eventData.pseudonyms_size());
-  for (const auto &entry : eventData.pseudonyms()) {
-    const auto name = QString::fromStdString(entry).trimmed();
-    if (!name.isEmpty()) {
-      names.append(name);
-    }
-  }
-
-  if (names.isEmpty()) {
+  if (pseudonyms.isEmpty()) {
     return;
   }
 
-  switch (eventData.event_type()) {
+  switch (eventType) {
   case chat::ClientEventData::ADD: {
-    for (const auto &name : names) {
+    for (const auto &name : pseudonyms) {
       if (addClientToList(name)) {
         addMessage("System", QStringLiteral("%1 joined the chat.").arg(name),
                    MESSAGE_COLOR_USER_CONNECT_);
@@ -346,7 +352,7 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
     break;
   }
   case chat::ClientEventData::REMOVE: {
-    for (const auto &name : names) {
+    for (const auto &name : pseudonyms) {
       if (removeClientFromList(name)) {
         addMessage("System", QStringLiteral("%1 has left the chat.").arg(name),
                    MESSAGE_COLOR_USER_DISCONNECT_);
@@ -359,7 +365,7 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
                                        ? clientsList_->currentItem()->text()
                                        : QString{};
     clientsList_->clear();
-    for (const auto &name : names) {
+    for (const auto &name : pseudonyms) {
       addClientToList(name);
     }
 
@@ -378,74 +384,17 @@ void ChatWindow::handleClientEvent(const chat::ClientEventData &eventData) {
 }
 
 void ChatWindow::startMessageStream() {
-  if (!chatSession_) {
-    return;
-  }
-
-  stopMessageStream();
-
-  chatSession_->startMessageStream(
-      [this](const chat::InformClientsNewMessageResponse &incoming) {
-        const auto author = QString::fromStdString(incoming.author());
-        const auto content = QString::fromStdString(incoming.content());
-        QMetaObject::invokeMethod(
-            this, [this, author, content]() { addMessage(author, content); },
-            Qt::QueuedConnection);
-      },
-      [this](const std::string &errorText) {
-        if (errorText.empty()) {
-          return;
-        }
-        const auto formatted = QString::fromStdString(errorText);
-        QMetaObject::invokeMethod(
-            this,
-            [this, formatted]() {
-              addMessage(
-                  "System",
-                  QStringLiteral("Message stream stopped: %1").arg(formatted));
-            },
-            Qt::QueuedConnection);
-      });
+  emit startMessageStreamRequested();
 }
 
 void ChatWindow::stopMessageStream() {
-  if (chatSession_) {
-    chatSession_->stopMessageStream();
-  }
+  emit stopMessageStreamRequested();
 }
 
 void ChatWindow::startClientEventStream() {
-  if (!chatSession_) {
-    return;
-  }
-
-  stopClientEventStream();
-
-  chatSession_->startClientEventStream(
-      [this](const chat::ClientEventData &incoming) {
-        const auto eventData = incoming;
-        QMetaObject::invokeMethod(
-            this, [this, eventData]() { handleClientEvent(eventData); },
-            Qt::QueuedConnection);
-      },
-      [this](const std::string &errorText) {
-        if (errorText.empty()) {
-          return;
-        }
-        const auto formatted = QString::fromStdString(errorText);
-        QMetaObject::invokeMethod(
-            this,
-            [this, formatted]() {
-              addMessage("System",
-                         QStringLiteral("Client event stream stopped: %1")
-                             .arg(formatted));
-            },
-            Qt::QueuedConnection);
-      });
+  emit startClientEventStreamRequested();
 }
 
 void ChatWindow::stopClientEventStream() {
-  if (chatSession_) {
-    chatSession_->stopClientEventStream();
-  }
+  emit stopClientEventStreamRequested();
 }

@@ -2,9 +2,7 @@
 
 #include <QWidget>
 #include <QString>
-
-#include <memory>
-#include <string>
+#include <QStringList>
 
 class QFormLayout;
 class QLineEdit;
@@ -15,23 +13,35 @@ class QStackedWidget;
 class QTextBrowser;
 class QCloseEvent;
 
-class ChatClientSession;
-
-namespace chat {
-class ClientEventData;
-}
-
 class ChatWindow : public QWidget {
   Q_OBJECT
 
 public:
-  explicit ChatWindow(QString serverAddress,
-                      std::unique_ptr<ChatClientSession> chatSession,
-                      QWidget *parent = nullptr);
+  explicit ChatWindow(QString serverAddress, QWidget *parent = nullptr);
   ~ChatWindow() override;
 
 protected:
   void closeEvent(QCloseEvent *event) override;
+
+signals:
+  void connectRequested(const QString &pseudonym, const QString &gender,
+                        const QString &country);
+  void disconnectRequested(const QString &pseudonym);
+  void sendMessageRequested(const QString &content);
+  void startMessageStreamRequested();
+  void stopMessageStreamRequested();
+  void startClientEventStreamRequested();
+  void stopClientEventStreamRequested();
+
+public slots:
+  void onConnectFinished(bool ok, const QString &errorText, bool accepted,
+                         const QString &message);
+  void onDisconnectFinished(bool ok, const QString &errorText);
+  void onSendMessageFinished(bool ok, const QString &errorText);
+  void onMessageReceived(const QString &author, const QString &content);
+  void onMessageStreamError(const QString &errorText);
+  void onClientEventReceived(int eventType, const QStringList &pseudonyms);
+  void onClientEventStreamError(const QString &errorText);
 
 private:
   static inline QString MESSAGE_COLOR_SYSTEM_{"blue"};
@@ -47,7 +57,7 @@ private:
   void switchToChatView(const QString &welcomeMessage);
   bool addClientToList(const QString &pseudonym);
   bool removeClientFromList(const QString &pseudonym);
-  void handleClientEvent(const chat::ClientEventData &eventData);
+  void handleClientEvent(int eventType, const QStringList &pseudonyms);
   void startMessageStream();
   void stopMessageStream();
   void startClientEventStream();
@@ -66,6 +76,4 @@ private:
   QPushButton *sendButton_;
   bool connected_{false};
   QString serverAddress_;
-
-  std::unique_ptr<ChatClientSession> chatSession_;
 };
