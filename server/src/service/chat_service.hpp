@@ -11,7 +11,7 @@
 
 class ChatService final : public chat::ChatService::Service {
 public:
-  explicit ChatService(std::shared_ptr<database::IDatabaseRepository> db);
+  explicit ChatService(std::weak_ptr<database::IDatabaseRepository> db);
 
   grpc::Status Connect(grpc::ServerContext *context,
                        const chat::ConnectRequest *request,
@@ -37,5 +37,8 @@ public:
 
 private:
   domain::ChatRoom chatRoom_;
-  std::shared_ptr<database::IDatabaseRepository> db_;
+  std::weak_ptr<database::IDatabaseRepository> db_;
+
+  std::shared_ptr<database::IDatabaseRepository>
+  getSharedDatabaseRepository() const;
 };

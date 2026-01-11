@@ -59,16 +59,21 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    // db manager
+    // db manager instanciation and initialization
     auto dbMngr = std::make_shared<database::DatabaseManager>();
+    if (const auto error = dbMngr->init(); error.has_value()) {
+      std::cerr << *error << std::endl;
+      return 1;
+    }
     if (const auto error = dbMngr->printStatisticsTableContent();
         error.has_value()) {
       std::cerr << *error << std::endl;
+      return 1;
     }
 
     // grpc thread configuration, instanciation and start
-    std::thread grpcThread([dbMngrLambda = std::move(dbMngr), serverAddress]() {
-      ChatService service(dbMngrLambda);
+    std::thread grpcThread([dbMngrGrpc = dbMngr, serverAddress]() {
+      ChatService service(dbMngrGrpc);
       grpc::ServerBuilder builder;
       builder.AddListeningPort(serverAddress.value(),
                                grpc::InsecureServerCredentials());

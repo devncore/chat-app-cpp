@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-ChatService::ChatService(std::shared_ptr<database::IDatabaseRepository> db)
+ChatService::ChatService(std::weak_ptr<database::IDatabaseRepository> db)
     : db_(std::move(db)) {}
 
 grpc::Status ChatService::Connect(grpc::ServerContext *context,
@@ -34,7 +34,8 @@ grpc::Status ChatService::Connect(grpc::ServerContext *context,
   std::cout << result.message << std::endl;
 
   if (result.accepted) {
-    if (const auto error = db_->clientConnectionEvent(request->pseudonym());
+    const auto db = getSharedDatabaseRepository();
+    if (const auto error = db->clientConnectionEvent(request->pseudonym());
         error.has_value()) {
       std::cerr << *error << std::endl;
     }
@@ -95,8 +96,8 @@ grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
 
   chatRoom_.addMessage(pseudonym, request->content());
 
-  if (const auto error = db_->incrementTxMessage(pseudonym);
-      error.has_value()) {
+  const auto db = getSharedDatabaseRepository();
+  if (const auto error = db->incrementTxMessage(pseudonym); error.has_value()) {
     std::cerr << *error << std::endl;
   }
 
@@ -207,4 +208,13 @@ grpc::Status ChatService::SubscribeClientEvents(
                           "failed to write to client stream");
     }
   }
+}
+
+std::shared_ptr<database::IDatabaseRepository>
+ChatService::getSharedDatabaseRepository() const {
+  auto db = db_.lock();
+  if (!db) {
+    throw std::runtime_error("Database repository is no longer available");
+  }
+  return db;
 }
