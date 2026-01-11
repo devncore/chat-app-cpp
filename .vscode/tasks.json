@@ -21,10 +21,16 @@
       "detail": "Configure the Qt server project"
     },
     {
+      "label": "create_initial_server_db",
+      "type": "shell",
+      "command": "bash tools/init_server_db.sh",
+      "detail": "Initialize the server SQLite database"
+    },
+    {
       "label": "build_and_run_server",
       "type": "shell",
       "command": "cmake --build server/build && ./server/build/chat_server --listen=0.0.0.0:50051",
-      "dependsOn": ["configure_server"],
+      "dependsOn": ["configure_server", "create_initial_server_db"],
       "detail": "Build and run the Qt server executable"
     },
     {
@@ -63,7 +69,7 @@
       "label": "run_server_root",
       "type": "shell",
       "command": "./build/server/chat_server --listen=0.0.0.0:50051",
-      "dependsOn": ["build_root"],
+      "dependsOn": ["build_root", "create_initial_server_db"],
       "detail": "Run the server from the root build"
     },
     {
@@ -83,6 +89,7 @@
     {
       "label": "build_and_run_server_and_two_clients",
       "dependsOn": [
+        "create_initial_server_db",
         "run_server_root",
         "run_client_root_1",
         "run_client_root_2"

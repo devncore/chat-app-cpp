@@ -1,4 +1,4 @@
-#include "service/chat_service_impl.hpp"
+#include "service/chat_service.hpp"
 
 #include <chrono>
 #include <format>
@@ -7,13 +7,12 @@
 #include <utility>
 #include <vector>
 
-ChatServiceImpl::ChatServiceImpl(
-    std::shared_ptr<database::IDatabaseRepository> db)
+ChatService::ChatService(std::shared_ptr<database::IDatabaseRepository> db)
     : db_(std::move(db)) {}
 
-grpc::Status ChatServiceImpl::Connect(grpc::ServerContext *context,
-                                      const chat::ConnectRequest *request,
-                                      chat::ConnectResponse *response) {
+grpc::Status ChatService::Connect(grpc::ServerContext *context,
+                                  const chat::ConnectRequest *request,
+                                  chat::ConnectResponse *response) {
   if (request == nullptr || request->pseudonym().empty()) {
     response->set_accepted(false);
     response->set_message("pseudonym is required");
@@ -41,9 +40,9 @@ grpc::Status ChatServiceImpl::Connect(grpc::ServerContext *context,
   return grpc::Status::OK;
 }
 
-grpc::Status ChatServiceImpl::Disconnect(grpc::ServerContext *context,
-                                         const chat::DisconnectRequest *request,
-                                         google::protobuf::Empty *response) {
+grpc::Status ChatService::Disconnect(grpc::ServerContext *context,
+                                     const chat::DisconnectRequest *request,
+                                     google::protobuf::Empty *response) {
   (void)response;
 
   const auto &pseudonym = request->pseudonym();
@@ -64,10 +63,9 @@ grpc::Status ChatServiceImpl::Disconnect(grpc::ServerContext *context,
   return grpc::Status::OK;
 }
 
-grpc::Status
-ChatServiceImpl::SendMessage(grpc::ServerContext *context,
-                             const chat::SendMessageRequest *request,
-                             google::protobuf::Empty *response) {
+grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
+                                      const chat::SendMessageRequest *request,
+                                      google::protobuf::Empty *response) {
   if (request == nullptr || request->content().empty()) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
                         "message content is required");
@@ -99,7 +97,7 @@ ChatServiceImpl::SendMessage(grpc::ServerContext *context,
   return grpc::Status::OK;
 }
 
-grpc::Status ChatServiceImpl::SubscribeMessages(
+grpc::Status ChatService::SubscribeMessages(
     grpc::ServerContext *context,
     const chat::InformClientsNewMessageRequest *request,
     grpc::ServerWriter<chat::InformClientsNewMessageResponse> *writer) {
@@ -145,7 +143,7 @@ grpc::Status ChatServiceImpl::SubscribeMessages(
   }
 }
 
-grpc::Status ChatServiceImpl::SubscribeClientEvents(
+grpc::Status ChatService::SubscribeClientEvents(
     grpc::ServerContext *context, const google::protobuf::Empty *request,
     grpc::ServerWriter<chat::ClientEventData> *writer) {
   (void)request;

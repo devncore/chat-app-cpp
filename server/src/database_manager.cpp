@@ -1,4 +1,4 @@
-#include "database_manager_sqlitecpp.hpp"
+#include "database_manager.hpp"
 
 #include <SQLiteCpp/SQLiteCpp.h>
 
@@ -8,17 +8,16 @@
 
 namespace database {
 
-SQLiteCppDatabaseManager::SQLiteCppDatabaseManager()
-    : SQLiteCppDatabaseManager("server_db.db") {}
+DatabaseManager::DatabaseManager() : DatabaseManager("server_db.db") {}
 
-SQLiteCppDatabaseManager::SQLiteCppDatabaseManager(std::string dbPath)
+DatabaseManager::DatabaseManager(std::string dbPath)
     : dbPath_(std::move(dbPath)) {
   init();
 }
 
-SQLiteCppDatabaseManager::~SQLiteCppDatabaseManager() = default;
+DatabaseManager::~DatabaseManager() = default;
 
-void SQLiteCppDatabaseManager::init() {
+void DatabaseManager::init() {
   if (db_) {
     return;
   }
@@ -26,23 +25,13 @@ void SQLiteCppDatabaseManager::init() {
   try {
     db_ = std::make_unique<SQLite::Database>(dbPath_, SQLite::OPEN_READWRITE |
                                                           SQLite::OPEN_CREATE);
-
-    const std::string createSql =
-        std::string("CREATE TABLE IF NOT EXISTS ") + statisticsTable_ +
-        " ("
-        "pseudonym TEXT PRIMARY KEY,"
-        "nb_of_connection INTEGER NOT NULL CHECK (nb_of_connection >= 0),"
-        "tx_messages INTEGER NOT NULL CHECK (tx_messages >= 0),"
-        "cumulated_connection_time_sec INTEGER NOT NULL CHECK "
-        "(cumulated_connection_time_sec >= 0));";
-    db_->exec(createSql);
   } catch (const std::exception &ex) {
     std::cerr << "Failed to open database: " << ex.what() << std::endl;
     db_.reset();
   }
 }
 
-bool SQLiteCppDatabaseManager::ensureOpen() {
+bool DatabaseManager::ensureOpen() {
   if (!db_) {
     init();
   }
@@ -55,8 +44,7 @@ bool SQLiteCppDatabaseManager::ensureOpen() {
   return true;
 }
 
-void SQLiteCppDatabaseManager::clientConnectionEvent(
-    const std::string &pseudonymStd) {
+void DatabaseManager::clientConnectionEvent(const std::string &pseudonymStd) {
   if (!ensureOpen()) {
     return;
   }
@@ -97,8 +85,7 @@ void SQLiteCppDatabaseManager::clientConnectionEvent(
   }
 }
 
-void SQLiteCppDatabaseManager::incrementTxMessage(
-    const std::string &pseudonymStd) {
+void DatabaseManager::incrementTxMessage(const std::string &pseudonymStd) {
   if (!ensureOpen()) {
     return;
   }
@@ -134,7 +121,7 @@ void SQLiteCppDatabaseManager::incrementTxMessage(
   }
 }
 
-void SQLiteCppDatabaseManager::printStatisticsTableContent() {
+void DatabaseManager::printStatisticsTableContent() {
   if (!ensureOpen()) {
     return;
   }

@@ -7,8 +7,8 @@
 #include <string>
 #include <thread>
 
-#include "database_manager_sqlitecpp.hpp"
-#include "service/chat_service_impl.hpp"
+#include "database_manager.hpp"
+#include "service/chat_service.hpp"
 
 class ArgumentParser {
 public:
@@ -60,12 +60,12 @@ int main(int argc, char **argv) {
     }
 
     // db manager
-    auto dbMngr = std::make_shared<database::SQLiteCppDatabaseManager>();
+    auto dbMngr = std::make_shared<database::DatabaseManager>();
     dbMngr->printStatisticsTableContent();
 
     // grpc thread configuration, instanciation and start
     std::thread grpcThread([dbMngrLambda = std::move(dbMngr), serverAddress]() {
-      ChatServiceImpl service(dbMngrLambda);
+      ChatService service(dbMngrLambda);
       grpc::ServerBuilder builder;
       builder.AddListeningPort(serverAddress.value(),
                                grpc::InsecureServerCredentials());

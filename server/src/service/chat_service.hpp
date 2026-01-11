@@ -9,9 +9,9 @@
 #include "domain/chat_room.hpp"
 #include "repository/database_repository.hpp"
 
-class ChatServiceImpl final : public chat::ChatService::Service {
+class ChatService final : public chat::ChatService::Service {
 public:
-  explicit ChatServiceImpl(std::shared_ptr<database::IDatabaseRepository> db);
+  explicit ChatService(std::shared_ptr<database::IDatabaseRepository> db);
 
   grpc::Status Connect(grpc::ServerContext *context,
                        const chat::ConnectRequest *request,

@@ -1,3 +1,4 @@
 build/
 docs/doxygen/*
 .cache/*
+temp/*

@@ -12,11 +12,11 @@ class Database;
 
 namespace database {
 
-class SQLiteCppDatabaseManager : public IDatabaseRepository {
+class DatabaseManager : public IDatabaseRepository {
 public:
-  SQLiteCppDatabaseManager();
-  explicit SQLiteCppDatabaseManager(std::string dbPath);
-  ~SQLiteCppDatabaseManager() override;
+  DatabaseManager();
+  explicit DatabaseManager(std::string dbPath);
+  ~DatabaseManager() override;
 
   void init();
   void clientConnectionEvent(const std::string &pseudonymStd) override;

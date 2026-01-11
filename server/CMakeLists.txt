@@ -5,7 +5,6 @@ project(ChatServer LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_AUTOMOC ON)
 
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
@@ -23,9 +22,9 @@ endif()
 
 add_executable(chat_server
     src/main.cpp
-    src/database_manager_sqlitecpp.cpp
+    src/database_manager.cpp
     src/domain/chat_room.cpp
-    src/service/chat_service_impl.cpp
+    src/service/chat_service.cpp
 )
 
 target_include_directories(chat_server
