@@ -12,19 +12,29 @@ class Database;
 
 namespace database {
 
+/**
+ * @brief Manages database operations for the server.
+ *
+ * features:
+ *  - Initializes and maintains a SQLite database connection.
+ *  - If needed, a database connection retry is implemented on each method call.
+ */
 class DatabaseManager : public IDatabaseRepository {
 public:
   DatabaseManager();
   explicit DatabaseManager(std::string dbPath);
   ~DatabaseManager() override;
 
-  void init();
-  void clientConnectionEvent(const std::string &pseudonymStd) override;
-  void incrementTxMessage(const std::string &pseudonymStd) override;
-  void printStatisticsTableContent() override;
+  [[nodiscard]] OptionalErrorMessage init();
+  [[nodiscard]] OptionalErrorMessage
+  clientConnectionEvent(const std::string &pseudonymStd) noexcept override;
+  [[nodiscard]] OptionalErrorMessage
+  incrementTxMessage(const std::string &pseudonymStd) noexcept override;
+  [[nodiscard]] OptionalErrorMessage
+  printStatisticsTableContent() noexcept override;
 
 private:
-  bool ensureOpen();
+  [[nodiscard]] OptionalErrorMessage ensureOpen();
 
   const std::string statisticsTable_ = "Statistics";
   std::string dbPath_;

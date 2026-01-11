@@ -11,42 +11,44 @@ namespace database {
 DatabaseManager::DatabaseManager() : DatabaseManager("server_db.db") {}
 
 DatabaseManager::DatabaseManager(std::string dbPath)
-    : dbPath_(std::move(dbPath)) {
-  init();
-}
+    : dbPath_(std::move(dbPath)) {}
 
 DatabaseManager::~DatabaseManager() = default;
 
-void DatabaseManager::init() {
+OptionalErrorMessage DatabaseManager::init() {
   if (db_) {
-    return;
+    return std::nullopt;
   }
 
   try {
     db_ = std::make_unique<SQLite::Database>(dbPath_, SQLite::OPEN_READWRITE |
                                                           SQLite::OPEN_CREATE);
   } catch (const std::exception &ex) {
-    std::cerr << "Failed to open database: " << ex.what() << std::endl;
     db_.reset();
+    return std::string("Failed to open database: ") + ex.what();
   }
+
+  return std::nullopt;
 }
 
-bool DatabaseManager::ensureOpen() {
+OptionalErrorMessage DatabaseManager::ensureOpen() {
   if (!db_) {
-    init();
+    if (const auto error = init(); error.has_value()) {
+      return error;
+    }
   }
 
   if (!db_) {
-    std::cerr << "Database is not initialized or opened." << std::endl;
-    return false;
+    return std::string("Database is not initialized or opened.");
   }
 
-  return true;
+  return std::nullopt;
 }
 
-void DatabaseManager::clientConnectionEvent(const std::string &pseudonymStd) {
-  if (!ensureOpen()) {
-    return;
+OptionalErrorMessage DatabaseManager::clientConnectionEvent(
+    const std::string &pseudonymStd) noexcept {
+  if (const auto error = ensureOpen(); error.has_value()) {
+    return error;
   }
 
   try {
@@ -67,7 +69,7 @@ void DatabaseManager::clientConnectionEvent(const std::string &pseudonymStd) {
       queryUpdate.exec();
       std::cout << "Incremented nb_of_connection for: " << pseudonymStd
                 << std::endl;
-      return;
+      return std::nullopt;
     }
 
     SQLite::Statement queryInsert(
@@ -80,14 +82,16 @@ void DatabaseManager::clientConnectionEvent(const std::string &pseudonymStd) {
     queryInsert.exec();
     std::cout << "New entry created for: " << pseudonymStd << std::endl;
   } catch (const std::exception &ex) {
-    std::cerr << "Failed to update connection statistics: " << ex.what()
-              << std::endl;
+    return std::string("Failed to update connection statistics: ") + ex.what();
   }
+
+  return std::nullopt;
 }
 
-void DatabaseManager::incrementTxMessage(const std::string &pseudonymStd) {
-  if (!ensureOpen()) {
-    return;
+OptionalErrorMessage
+DatabaseManager::incrementTxMessage(const std::string &pseudonymStd) noexcept {
+  if (const auto error = ensureOpen(); error.has_value()) {
+    return error;
   }
 
   try {
@@ -108,22 +112,22 @@ void DatabaseManager::incrementTxMessage(const std::string &pseudonymStd) {
       queryUpdate.exec();
       std::cout << "Incremented tx_messages to '" << current + 1
                 << "' for: " << pseudonymStd << std::endl;
-      return;
+      return std::nullopt;
     }
 
-    std::cout << "Error: Incremented tx_messages SKIPPED because pseudonym ('"
-              << pseudonymStd
-              << "') primary key doesn't exists in the db table 'Statistics'."
-              << std::endl;
+    return std::string("Incremented tx_messages skipped because pseudonym ('") +
+           pseudonymStd +
+           "') primary key does not exist in the db table 'Statistics'.";
   } catch (const std::exception &ex) {
-    std::cerr << "Failed to update tx message count: " << ex.what()
-              << std::endl;
+    return std::string("Failed to update tx message count: ") + ex.what();
   }
+
+  return std::nullopt;
 }
 
-void DatabaseManager::printStatisticsTableContent() {
-  if (!ensureOpen()) {
-    return;
+OptionalErrorMessage DatabaseManager::printStatisticsTableContent() noexcept {
+  if (const auto error = ensureOpen(); error.has_value()) {
+    return error;
   }
 
   try {
@@ -134,7 +138,7 @@ void DatabaseManager::printStatisticsTableContent() {
 
     if (!query.executeStep()) {
       std::cout << "Statistics table is empty." << std::endl;
-      return;
+      return std::nullopt;
     }
 
     std::cout << "Statistics:" << std::endl;
@@ -156,8 +160,10 @@ void DatabaseManager::printStatisticsTableContent() {
                 << cumulatedTime << std::endl;
     } while (query.executeStep());
   } catch (const std::exception &ex) {
-    std::cerr << "Failed to read statistics table: " << ex.what() << std::endl;
+    return std::string("Failed to read statistics table: ") + ex.what();
   }
+
+  return std::nullopt;
 }
 
 } // namespace database

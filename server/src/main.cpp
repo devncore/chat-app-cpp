@@ -61,7 +61,10 @@ int main(int argc, char **argv) {
 
     // db manager
     auto dbMngr = std::make_shared<database::DatabaseManager>();
-    dbMngr->printStatisticsTableContent();
+    if (const auto error = dbMngr->printStatisticsTableContent();
+        error.has_value()) {
+      std::cerr << *error << std::endl;
+    }
 
     // grpc thread configuration, instanciation and start
     std::thread grpcThread([dbMngrLambda = std::move(dbMngr), serverAddress]() {

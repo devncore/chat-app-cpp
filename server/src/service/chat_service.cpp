@@ -34,7 +34,10 @@ grpc::Status ChatService::Connect(grpc::ServerContext *context,
   std::cout << result.message << std::endl;
 
   if (result.accepted) {
-    db_->clientConnectionEvent(request->pseudonym());
+    if (const auto error = db_->clientConnectionEvent(request->pseudonym());
+        error.has_value()) {
+      std::cerr << *error << std::endl;
+    }
   }
 
   return grpc::Status::OK;
@@ -92,7 +95,10 @@ grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
 
   chatRoom_.addMessage(pseudonym, request->content());
 
-  db_->incrementTxMessage(pseudonym);
+  if (const auto error = db_->incrementTxMessage(pseudonym);
+      error.has_value()) {
+    std::cerr << *error << std::endl;
+  }
 
   return grpc::Status::OK;
 }
