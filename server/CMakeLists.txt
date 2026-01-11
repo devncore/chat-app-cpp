@@ -12,8 +12,8 @@ if(CCACHE_PROGRAM)
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Sql)
 find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(SQLiteCpp REQUIRED)
 
 if(NOT TARGET chat_proto)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../common
@@ -23,7 +23,7 @@ endif()
 
 add_executable(chat_server
     src/main.cpp
-    src/database_manager.cpp
+    src/database_manager_sqlitecpp.cpp
     src/domain/chat_room.cpp
     src/service/chat_service_impl.cpp
 )
@@ -37,6 +37,5 @@ target_link_libraries(chat_server
     PRIVATE
         chat_proto
         Boost::program_options
-        Qt6::Core
-        Qt6::Sql
+        SQLiteCpp
 )
