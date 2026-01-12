@@ -7,7 +7,8 @@
 #include <string>
 #include <thread>
 
-#include "database_manager.hpp"
+#include "database/database_manager.hpp"
+#include "database/database_manager_factory.hpp"
 #include "service/chat_service.hpp"
 
 class ArgumentParser {
@@ -51,28 +52,24 @@ private:
 int main(int argc, char **argv) {
 
   try {
-    // Arguments parsing
+    // arguments parsing
     ArgumentParser argParser(argc, argv);
     const auto serverAddress = argParser.getServerAddress();
     if (not serverAddress.has_value()) {
-      std::cerr << "Failed to parse server address argument." << std::endl;
-      return 1;
+      throw std::runtime_error("Invalid server address argument.");
     }
 
-    // db manager instanciation and initialization
-    auto dbMngr = std::make_shared<database::DatabaseManager>();
-    if (const auto error = dbMngr->init(); error.has_value()) {
-      std::cerr << *error << std::endl;
-      return 1;
-    }
-    if (const auto error = dbMngr->printStatisticsTableContent();
-        error.has_value()) {
-      std::cerr << *error << std::endl;
-      return 1;
+    // db manager instanciation and print
+    const auto databaseManagerOrError =
+        database::DatabaseManagerFactory::createDatabaseManager();
+    if (!databaseManagerOrError.has_value()) {
+      throw std::runtime_error("Failed to create DatabaseManager: " +
+                               databaseManagerOrError.error());
     }
 
     // grpc thread configuration, instanciation and start
-    std::thread grpcThread([dbMngrGrpc = dbMngr, serverAddress]() {
+    std::thread grpcThread([dbMngrGrpc = *databaseManagerOrError,
+                            serverAddress]() {
       ChatService service(dbMngrGrpc);
       grpc::ServerBuilder builder;
       builder.AddListeningPort(serverAddress.value(),
@@ -81,8 +78,7 @@ int main(int argc, char **argv) {
 
       std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
       if (!server) {
-        std::cerr << "Failed to start gRPC server." << std::endl;
-        return 1;
+        throw std::runtime_error("Failed to start gRPC server.");
       }
 
       std::cout << "Server listening on " << serverAddress.value() << std::endl;

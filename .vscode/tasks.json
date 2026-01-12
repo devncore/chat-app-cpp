@@ -2,23 +2,13 @@
   "version": "2.1.0",
   "tasks": [
     {
-      "label": "configure_client",
-      "type": "shell",
-      "command": "cmake -S client -B client/build",
-      "detail": "Configure the Qt client project"
-    },
-    {
       "label": "build_and_run_client",
       "type": "shell",
-      "command": "cmake --build client/build && ./client/build/chat_client --server=localhost:50051",
-      "dependsOn": ["configure_client"],
-      "detail": "Build and run the Qt client executable"
-    },
-        {
-      "label": "configure_server",
-      "type": "shell",
-      "command": "cmake -S server -B server/build",
-      "detail": "Configure the Qt server project"
+      "command": "cmake --build build && ./build/client/chat_client --server=localhost:50051",
+      "dependsOn": [
+        "configure_root"
+      ],
+      "detail": "Build and run the Qt client executable from the root build"
     },
     {
       "label": "create_initial_server_db",
@@ -29,9 +19,12 @@
     {
       "label": "build_and_run_server",
       "type": "shell",
-      "command": "cmake --build server/build && ./server/build/chat_server --listen=0.0.0.0:50051",
-      "dependsOn": ["configure_server", "create_initial_server_db"],
-      "detail": "Build and run the Qt server executable"
+      "command": "cmake --build build && ./build/server/chat_server --listen=0.0.0.0:50051",
+      "dependsOn": [
+        "configure_root",
+        "create_initial_server_db"
+      ],
+      "detail": "Build and run the Qt server executable from the root build"
     },
     {
       "label": "configure_root",
@@ -49,7 +42,9 @@
       "label": "clang_tidy",
       "type": "shell",
       "command": "run-clang-tidy -p build",
-      "dependsOn": ["configure_root_compdb"],
+      "dependsOn": [
+        "configure_root_compdb"
+      ],
       "detail": "Run clang-tidy on the codebase"
     },
     {
@@ -62,28 +57,37 @@
       "label": "build_root",
       "type": "shell",
       "command": "cmake --build build",
-      "dependsOn": ["configure_root"],
+      "dependsOn": [
+        "configure_root"
+      ],
       "detail": "Build the root CMake project"
     },
     {
       "label": "run_server_root",
       "type": "shell",
       "command": "./build/server/chat_server --listen=0.0.0.0:50051",
-      "dependsOn": ["build_root", "create_initial_server_db"],
+      "dependsOn": [
+        "build_root",
+        "create_initial_server_db"
+      ],
       "detail": "Run the server from the root build"
     },
     {
       "label": "run_client_root_1",
       "type": "shell",
       "command": "./build/client/chat_client --server=localhost:50051",
-      "dependsOn": ["build_root"],
+      "dependsOn": [
+        "build_root"
+      ],
       "detail": "Run the first client from the root build"
     },
     {
       "label": "run_client_root_2",
       "type": "shell",
       "command": "./build/client/chat_client --server=localhost:50051",
-      "dependsOn": ["build_root"],
+      "dependsOn": [
+        "build_root"
+      ],
       "detail": "Run the second client from the root build"
     },
     {
@@ -100,8 +104,8 @@
     {
       "label": "clean_all",
       "type": "shell",
-      "command": "rm -rf client/build server/build",
-      "detail": "Remove all build artifacts"
+      "command": "rm -rf build/",
+      "detail": "Remove all build artifacts from the root build"
     },
     {
       "label": "generate_doxygen",
