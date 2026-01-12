@@ -1,8 +1,8 @@
 #include <QApplication>
 #include <QCommandLineParser>
 
-#include "chat_window.hpp"
-#include "grpc_chat_client.hpp"
+#include "service/chat_service_grpc.hpp"
+#include "ui/chat_window.hpp"
 
 static QString getServerAddressFromArguments(const QApplication &app) {
   QCommandLineParser parser;
@@ -25,38 +25,39 @@ int main(int argc, char *argv[]) {
 
   // instanciate grpc & chat client components
   ChatWindow window(serverAddress);
-  GrpcChatClient *grpcChatClient =
-      new GrpcChatClient(serverAddress.toStdString(), &window);
+  ChatServiceGrpc *grpcChatClient =
+      new ChatServiceGrpc(serverAddress.toStdString(), &window);
 
   // signals UI -> grpcgrpcChatClient
   QObject::connect(&window, &ChatWindow::connectRequested, grpcChatClient,
-                   &GrpcChatClient::connectToServer);
+                   &ChatServiceGrpc::connectToServer);
   QObject::connect(&window, &ChatWindow::disconnectRequested, grpcChatClient,
-                   &GrpcChatClient::disconnectFromServer);
+                   &ChatServiceGrpc::disconnectFromServer);
   QObject::connect(&window, &ChatWindow::sendMessageRequested, grpcChatClient,
-                   &GrpcChatClient::sendChatMessage);
+                   &ChatServiceGrpc::sendChatMessage);
   QObject::connect(&window, &ChatWindow::startMessageStreamRequested,
-                   grpcChatClient, &GrpcChatClient::startMessageStreamSlot);
+                   grpcChatClient, &ChatServiceGrpc::startMessageStreamSlot);
   QObject::connect(&window, &ChatWindow::stopMessageStreamRequested,
-                   grpcChatClient, &GrpcChatClient::stopMessageStreamSlot);
+                   grpcChatClient, &ChatServiceGrpc::stopMessageStreamSlot);
   QObject::connect(&window, &ChatWindow::startClientEventStreamRequested,
-                   grpcChatClient, &GrpcChatClient::startClientEventStreamSlot);
+                   grpcChatClient,
+                   &ChatServiceGrpc::startClientEventStreamSlot);
   QObject::connect(&window, &ChatWindow::stopClientEventStreamRequested,
-                   grpcChatClient, &GrpcChatClient::stopClientEventStreamSlot);
+                   grpcChatClient, &ChatServiceGrpc::stopClientEventStreamSlot);
   // signals grpc -> UI
-  QObject::connect(grpcChatClient, &GrpcChatClient::connectFinished, &window,
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::connectFinished, &window,
                    &ChatWindow::onConnectFinished);
-  QObject::connect(grpcChatClient, &GrpcChatClient::disconnectFinished, &window,
-                   &ChatWindow::onDisconnectFinished);
-  QObject::connect(grpcChatClient, &GrpcChatClient::sendMessageFinished,
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::disconnectFinished,
+                   &window, &ChatWindow::onDisconnectFinished);
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::sendMessageFinished,
                    &window, &ChatWindow::onSendMessageFinished);
-  QObject::connect(grpcChatClient, &GrpcChatClient::messageReceived, &window,
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::messageReceived, &window,
                    &ChatWindow::onMessageReceived);
-  QObject::connect(grpcChatClient, &GrpcChatClient::messageStreamError, &window,
-                   &ChatWindow::onMessageStreamError);
-  QObject::connect(grpcChatClient, &GrpcChatClient::clientEventReceived,
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::messageStreamError,
+                   &window, &ChatWindow::onMessageStreamError);
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::clientEventReceived,
                    &window, &ChatWindow::onClientEventReceived);
-  QObject::connect(grpcChatClient, &GrpcChatClient::clientEventStreamError,
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::clientEventStreamError,
                    &window, &ChatWindow::onClientEventStreamError);
 
   window.show();

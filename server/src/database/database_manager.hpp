@@ -1,44 +1,44 @@
 #pragma once
 
-#include <memory>
 #include <optional>
 #include <string>
 
-#include "repository/database_repository.hpp"
-
-namespace SQLite {
-class Database;
-}
-
 namespace database {
 
+using OptionalErrorMessage = std::optional<std::string>;
+
 /**
- * @brief Manages database operations for the server.
- *
- * features:
- *  - Initializes and maintains a SQLite database connection.
- *  - If needed, a database connection retry is implemented on each method call.
+ * @brief Interface for persistence operations used by the server.
  */
-class DatabaseManager : public IDatabaseRepository {
+class IDatabaseManager {
 public:
-  DatabaseManager();
-  explicit DatabaseManager(std::string dbPath);
-  ~DatabaseManager() override;
+  /**
+   * @brief Virtual destructor for interface cleanup.
+   */
+  virtual ~IDatabaseManager() = default;
 
-  [[nodiscard]] OptionalErrorMessage init();
-  [[nodiscard]] OptionalErrorMessage
-  clientConnectionEvent(const std::string &pseudonymStd) noexcept override;
-  [[nodiscard]] OptionalErrorMessage
-  incrementTxMessage(const std::string &pseudonymStd) noexcept override;
-  [[nodiscard]] OptionalErrorMessage
-  printStatisticsTableContent() noexcept override;
+  /**
+   * @brief Record a client connection event for the given pseudonym.
+   * @param pseudonymStd The client's pseudonym.
+   * @return Empty on success, or error message on failure.
+   */
+  [[nodiscard]] virtual OptionalErrorMessage
+  clientConnectionEvent(const std::string &pseudonymStd) noexcept = 0;
 
-private:
-  [[nodiscard]] OptionalErrorMessage ensureOpen();
+  /**
+   * @brief Increment transmitted message count for the given pseudonym.
+   * @param pseudonymStd The client's pseudonym.
+   * @return Empty on success, or error message on failure.
+   */
+  [[nodiscard]] virtual OptionalErrorMessage
+  incrementTxMessage(const std::string &pseudonymStd) noexcept = 0;
 
-  const std::string statisticsTable_ = "Statistics";
-  std::string dbPath_;
-  std::unique_ptr<SQLite::Database> db_;
+  /**
+   * @brief Emit the current statistics table content.
+   * @return Empty on success, or error message on failure.
+   */
+  [[nodiscard]] virtual OptionalErrorMessage
+  printStatisticsTableContent() noexcept = 0;
 };
 
 } // namespace database

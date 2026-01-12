@@ -61,9 +61,9 @@ int main(int argc, char **argv) {
 
     // db manager instanciation and print
     const auto databaseManagerOrError =
-        database::DatabaseManagerFactory::createDatabaseManager();
+        database::DatabaseManagerFactory::createDatabaseManagerSQLite();
     if (!databaseManagerOrError.has_value()) {
-      throw std::runtime_error("Failed to create DatabaseManager: " +
+      throw std::runtime_error("Failed to create DatabaseManagerSQLite: " +
                                databaseManagerOrError.error());
     }
 

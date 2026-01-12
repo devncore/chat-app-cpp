@@ -25,9 +25,12 @@ endif()
 
 qt_add_executable(chat_client
     src/main.cpp
-    src/chat_window.cpp
-    src/grpc_chat_client.cpp
+    src/ui/chat_window.cpp
+    src/service/chat_service_grpc.cpp
 )
+
+target_include_directories(chat_client PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(chat_client 
     PRIVATE 

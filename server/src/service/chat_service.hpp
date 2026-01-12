@@ -6,12 +6,12 @@
 #include <grpcpp/grpcpp.h>
 
 #include "chat.grpc.pb.h"
+#include "database/database_manager.hpp"
 #include "domain/chat_room.hpp"
-#include "repository/database_repository.hpp"
 
 class ChatService final : public chat::ChatService::Service {
 public:
-  explicit ChatService(std::weak_ptr<database::IDatabaseRepository> db);
+  explicit ChatService(std::weak_ptr<database::IDatabaseManager> db);
 
   grpc::Status Connect(grpc::ServerContext *context,
                        const chat::ConnectRequest *request,
@@ -37,8 +37,8 @@ public:
 
 private:
   domain::ChatRoom chatRoom_;
-  std::weak_ptr<database::IDatabaseRepository> db_;
+  std::weak_ptr<database::IDatabaseManager> db_;
 
-  std::shared_ptr<database::IDatabaseRepository>
+  std::shared_ptr<database::IDatabaseManager>
   getSharedDatabaseRepository() const;
 };

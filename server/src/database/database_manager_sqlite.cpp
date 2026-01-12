@@ -1,4 +1,4 @@
-#include "database/database_manager.hpp"
+#include "database/database_manager_sqlite.hpp"
 
 #include <SQLiteCpp/SQLiteCpp.h>
 
@@ -8,14 +8,15 @@
 
 namespace database {
 
-DatabaseManager::DatabaseManager() : DatabaseManager("server_db.db") {}
+DatabaseManagerSQLite::DatabaseManagerSQLite()
+    : DatabaseManagerSQLite("server_db.db") {}
 
-DatabaseManager::DatabaseManager(std::string dbPath)
+DatabaseManagerSQLite::DatabaseManagerSQLite(std::string dbPath)
     : dbPath_(std::move(dbPath)) {}
 
-DatabaseManager::~DatabaseManager() = default;
+DatabaseManagerSQLite::~DatabaseManagerSQLite() = default;
 
-OptionalErrorMessage DatabaseManager::init() {
+OptionalErrorMessage DatabaseManagerSQLite::init() {
   if (db_) {
     return std::nullopt;
   }
@@ -31,7 +32,7 @@ OptionalErrorMessage DatabaseManager::init() {
   return std::nullopt;
 }
 
-OptionalErrorMessage DatabaseManager::ensureOpen() {
+OptionalErrorMessage DatabaseManagerSQLite::ensureOpen() {
   if (!db_) {
     if (const auto error = init(); error.has_value()) {
       return error;
@@ -45,7 +46,7 @@ OptionalErrorMessage DatabaseManager::ensureOpen() {
   return std::nullopt;
 }
 
-OptionalErrorMessage DatabaseManager::clientConnectionEvent(
+OptionalErrorMessage DatabaseManagerSQLite::clientConnectionEvent(
     const std::string &pseudonymStd) noexcept {
   if (const auto error = ensureOpen(); error.has_value()) {
     return error;
@@ -88,8 +89,8 @@ OptionalErrorMessage DatabaseManager::clientConnectionEvent(
   return std::nullopt;
 }
 
-OptionalErrorMessage
-DatabaseManager::incrementTxMessage(const std::string &pseudonymStd) noexcept {
+OptionalErrorMessage DatabaseManagerSQLite::incrementTxMessage(
+    const std::string &pseudonymStd) noexcept {
   if (const auto error = ensureOpen(); error.has_value()) {
     return error;
   }
@@ -125,7 +126,8 @@ DatabaseManager::incrementTxMessage(const std::string &pseudonymStd) noexcept {
   return std::nullopt;
 }
 
-OptionalErrorMessage DatabaseManager::printStatisticsTableContent() noexcept {
+OptionalErrorMessage
+DatabaseManagerSQLite::printStatisticsTableContent() noexcept {
   if (const auto error = ensureOpen(); error.has_value()) {
     return error;
   }

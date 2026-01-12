@@ -15,7 +15,7 @@ clients, streams messages, and stores lightweight statistics in SQLite.
                        | ChatClientSession (interface)
                        v
              +---------+----------+
-             |  GrpcChatClient    |
+             |  ChatService    |
              |  gRPC transport    |
              +---------+----------+
                        |
@@ -33,10 +33,10 @@ clients, streams messages, and stores lightweight statistics in SQLite.
              |  clients/messages  |
              +---------+----------+
                        |
-                       | IDatabaseRepository
+                       | IDatabaseManager
                        v
              +---------+----------+
-             | DatabaseManager    |
+             | DatabaseManagerSQLite    |
              |  Qt + SQLite       |
              +--------------------+
 ```

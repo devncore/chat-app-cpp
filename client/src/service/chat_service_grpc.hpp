@@ -1,7 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <qobject.h>
@@ -12,22 +11,23 @@
 #include <QStringList>
 #include <google/protobuf/empty.pb.h>
 
-#include "chat_client_session.hpp"
+#include "chat_client.hpp"
 
-class GrpcChatClient : public QObject, public ChatClientSession {
+class ChatServiceGrpc : public QObject, public ChatClient {
   Q_OBJECT
 
 public:
-  using ChatClientSession::ClientEventCallback;
-  using ChatClientSession::ConnectResult;
-  using ChatClientSession::ErrorCallback;
-  using ChatClientSession::MessageCallback;
+  using ChatClient::ClientEventCallback;
+  using ChatClient::ConnectResult;
+  using ChatClient::ErrorCallback;
+  using ChatClient::MessageCallback;
 
-  explicit GrpcChatClient(std::string serverAddress, QObject *parent = nullptr);
-  ~GrpcChatClient() override;
+  explicit ChatServiceGrpc(std::string serverAddress,
+                           QObject *parent = nullptr);
+  ~ChatServiceGrpc() override;
 
-  GrpcChatClient(const GrpcChatClient &) = delete;
-  GrpcChatClient &operator=(const GrpcChatClient &) = delete;
+  ChatServiceGrpc(const ChatServiceGrpc &) = delete;
+  ChatServiceGrpc &operator=(const ChatServiceGrpc &) = delete;
 
   ConnectResult connect(const std::string &pseudonym, const std::string &gender,
                         const std::string &country) override;

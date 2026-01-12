@@ -22,7 +22,7 @@ endif()
 
 add_executable(chat_server
     src/main.cpp
-    src/database/database_manager.cpp
+    src/database/database_manager_sqlite.cpp
     src/domain/chat_room.cpp
     src/service/chat_service.cpp
 )

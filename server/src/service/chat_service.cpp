@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-ChatService::ChatService(std::weak_ptr<database::IDatabaseRepository> db)
+ChatService::ChatService(std::weak_ptr<database::IDatabaseManager> db)
     : db_(std::move(db)) {}
 
 grpc::Status ChatService::Connect(grpc::ServerContext *context,
@@ -210,7 +210,7 @@ grpc::Status ChatService::SubscribeClientEvents(
   }
 }
 
-std::shared_ptr<database::IDatabaseRepository>
+std::shared_ptr<database::IDatabaseManager>
 ChatService::getSharedDatabaseRepository() const {
   auto db = db_.lock();
   if (!db) {

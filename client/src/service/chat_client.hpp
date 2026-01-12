@@ -10,7 +10,7 @@
 /**
  * @brief Interface for a client chat session.
  */
-class ChatClientSession {
+class ChatClient {
 public:
   using MessageCallback =
       std::function<void(const chat::InformClientsNewMessageResponse &)>;
@@ -29,7 +29,7 @@ public:
   /**
    * @brief Virtual destructor for interface cleanup.
    */
-  virtual ~ChatClientSession() = default;
+  virtual ~ChatClient() = default;
 
   /**
    * @brief Connect the client to the server with profile data.

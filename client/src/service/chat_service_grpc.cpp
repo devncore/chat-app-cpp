@@ -1,19 +1,19 @@
-#include "grpc_chat_client.hpp"
+#include "service/chat_service_grpc.hpp"
 
 #include <qobject.h>
 #include <utility>
 
-GrpcChatClient::GrpcChatClient(std::string serverAddress, QObject *parent)
+ChatServiceGrpc::ChatServiceGrpc(std::string serverAddress, QObject *parent)
     : QObject(parent), serverAddress_(std::move(serverAddress)) {}
 
-GrpcChatClient::~GrpcChatClient() {
+ChatServiceGrpc::~ChatServiceGrpc() {
   stopMessageStream();
   stopClientEventStream();
 }
 
-void GrpcChatClient::connectToServer(const QString &pseudonym,
-                                     const QString &gender,
-                                     const QString &country) {
+void ChatServiceGrpc::connectToServer(const QString &pseudonym,
+                                      const QString &gender,
+                                      const QString &country) {
   const auto result = connect(pseudonym.toStdString(), gender.toStdString(),
                               country.toStdString());
   const bool ok = result.status.ok();
@@ -24,7 +24,7 @@ void GrpcChatClient::connectToServer(const QString &pseudonym,
   emit connectFinished(ok, errorText, result.response.accepted(), message);
 }
 
-void GrpcChatClient::disconnectFromServer(const QString &pseudonym) {
+void ChatServiceGrpc::disconnectFromServer(const QString &pseudonym) {
   const auto status = disconnect(pseudonym.toStdString());
   const bool ok = status.ok();
   const QString errorText =
@@ -33,7 +33,7 @@ void GrpcChatClient::disconnectFromServer(const QString &pseudonym) {
   emit disconnectFinished(ok, errorText);
 }
 
-void GrpcChatClient::sendChatMessage(const QString &content) {
+void ChatServiceGrpc::sendChatMessage(const QString &content) {
   const auto status = sendMessage(content.toStdString());
   const bool ok = status.ok();
   const QString errorText =
@@ -42,7 +42,7 @@ void GrpcChatClient::sendChatMessage(const QString &content) {
   emit sendMessageFinished(ok, errorText);
 }
 
-void GrpcChatClient::startMessageStreamSlot() {
+void ChatServiceGrpc::startMessageStreamSlot() {
   startMessageStream(
       [this](const chat::InformClientsNewMessageResponse &incoming) {
         emit messageReceived(QString::fromStdString(incoming.author()),
@@ -56,9 +56,9 @@ void GrpcChatClient::startMessageStreamSlot() {
       });
 }
 
-void GrpcChatClient::stopMessageStreamSlot() { stopMessageStream(); }
+void ChatServiceGrpc::stopMessageStreamSlot() { stopMessageStream(); }
 
-void GrpcChatClient::startClientEventStreamSlot() {
+void ChatServiceGrpc::startClientEventStreamSlot() {
   startClientEventStream(
       [this](const chat::ClientEventData &incoming) {
         QStringList names;
@@ -80,11 +80,12 @@ void GrpcChatClient::startClientEventStreamSlot() {
       });
 }
 
-void GrpcChatClient::stopClientEventStreamSlot() { stopClientEventStream(); }
+void ChatServiceGrpc::stopClientEventStreamSlot() { stopClientEventStream(); }
 
-GrpcChatClient::ConnectResult
-GrpcChatClient::connect(const std::string &pseudonym, const std::string &gender,
-                        const std::string &country) {
+ChatServiceGrpc::ConnectResult
+ChatServiceGrpc::connect(const std::string &pseudonym,
+                         const std::string &gender,
+                         const std::string &country) {
   ensureStub();
 
   chat::ConnectRequest request;
@@ -99,7 +100,7 @@ GrpcChatClient::connect(const std::string &pseudonym, const std::string &gender,
   return {.status = status, .response = response};
 }
 
-grpc::Status GrpcChatClient::disconnect(const std::string &pseudonym) {
+grpc::Status ChatServiceGrpc::disconnect(const std::string &pseudonym) {
   ensureStub();
 
   chat::DisconnectRequest request;
@@ -112,7 +113,7 @@ grpc::Status GrpcChatClient::disconnect(const std::string &pseudonym) {
   return status;
 }
 
-grpc::Status GrpcChatClient::sendMessage(const std::string &content) {
+grpc::Status ChatServiceGrpc::sendMessage(const std::string &content) {
   ensureStub();
   chat::SendMessageRequest request;
   request.set_content(content);
@@ -122,8 +123,8 @@ grpc::Status GrpcChatClient::sendMessage(const std::string &content) {
   return stub_->SendMessage(&context, request, &response);
 }
 
-void GrpcChatClient::startMessageStream(MessageCallback onMessage,
-                                        ErrorCallback onError) {
+void ChatServiceGrpc::startMessageStream(MessageCallback onMessage,
+                                         ErrorCallback onError) {
   ensureStub();
   stopMessageStream();
 
@@ -151,7 +152,7 @@ void GrpcChatClient::startMessageStream(MessageCallback onMessage,
   });
 }
 
-void GrpcChatClient::stopMessageStream() {
+void ChatServiceGrpc::stopMessageStream() {
   const bool wasRunning = messageStreamRunning_.exchange(false);
   if (wasRunning && messageStreamContext_) {
     messageStreamContext_->TryCancel();
@@ -164,8 +165,8 @@ void GrpcChatClient::stopMessageStream() {
   messageStreamContext_.reset();
 }
 
-void GrpcChatClient::startClientEventStream(ClientEventCallback onEvent,
-                                            ErrorCallback onError) {
+void ChatServiceGrpc::startClientEventStream(ClientEventCallback onEvent,
+                                             ErrorCallback onError) {
   ensureStub();
   stopClientEventStream();
 
@@ -193,7 +194,7 @@ void GrpcChatClient::startClientEventStream(ClientEventCallback onEvent,
   });
 }
 
-void GrpcChatClient::stopClientEventStream() {
+void ChatServiceGrpc::stopClientEventStream() {
   const bool wasRunning = clientEventStreamRunning_.exchange(false);
   if (wasRunning && clientEventStreamContext_) {
     clientEventStreamContext_->TryCancel();
@@ -206,7 +207,7 @@ void GrpcChatClient::stopClientEventStream() {
   clientEventStreamContext_.reset();
 }
 
-void GrpcChatClient::ensureStub() {
+void ChatServiceGrpc::ensureStub() {
   std::lock_guard<std::mutex> lock(stubMutex_);
   if (!stub_) {
     channel_ =

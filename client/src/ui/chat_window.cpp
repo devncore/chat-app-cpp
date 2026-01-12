@@ -1,4 +1,4 @@
-#include "chat_window.hpp"
+#include "ui/chat_window.hpp"
 
 #include <QAbstractItemView>
 #include <QCloseEvent>
