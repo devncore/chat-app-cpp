@@ -1,6 +1,8 @@
 #include "domain/chat_room.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <optional>
 #include <utility>
 
 namespace domain {
@@ -31,6 +33,7 @@ ConnectResult ChatRoom::connectClient(const std::string &peer,
         .country = country,
         .nextMessageIndex = messageHistory_.size(),
         .nextClientEventIndex = clientEvents_.size(),
+        .initialTimePoint = std::chrono::steady_clock::now(),
     };
 
     auto it = clients_.find(peer);
@@ -251,6 +254,16 @@ void ChatRoom::broadcastClientEvent(
     const std::string &pseudonym,
     chat::ClientEventData_ClientEventType eventType) {
   broadcastClientEvent(std::vector<std::string>{pseudonym}, eventType);
+}
+
+std::optional<std::chrono::steady_clock::duration>
+ChatRoom::getConnectionDuration(const std::string &peer) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = clients_.find(peer);
+  if (it == clients_.end()) {
+    return std::nullopt;
+  }
+  return std::chrono::steady_clock::now() - it->second.initialTimePoint;
 }
 
 } // namespace domain

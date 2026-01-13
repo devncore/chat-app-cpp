@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -32,6 +33,16 @@ public:
    */
   [[nodiscard]] virtual OptionalErrorMessage
   incrementTxMessage(const std::string &pseudonymStd) noexcept = 0;
+
+  /**
+   * @brief Update the cumulated connection time for the given pseudonym.
+   * @param pseudonymStd The client's pseudonym.
+   * @param durationInSec The duration in seconds to add.
+   * @return Empty on success, or error message on failure.
+   */
+  [[nodiscard]] virtual OptionalErrorMessage
+  updateCumulatedConnectionTime(const std::string &pseudonymStd,
+                                uint64_t durationInSec) noexcept = 0;
 
   /**
    * @brief Emit the current statistics table content.

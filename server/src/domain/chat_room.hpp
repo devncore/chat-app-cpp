@@ -17,6 +17,7 @@ struct ClientInfo {
   std::string country;
   std::size_t nextMessageIndex{0};
   std::size_t nextClientEventIndex{0};
+  std::chrono::steady_clock::time_point initialTimePoint;
 };
 
 struct ConnectResult {
@@ -62,13 +63,16 @@ public:
                                         std::chrono::milliseconds waitFor,
                                         chat::ClientEventData *out);
 
+  std::optional<std::chrono::steady_clock::duration>
+  getConnectionDuration(const std::string &peer) const;
+
 private:
   void broadcastClientEvent(const std::vector<std::string> &pseudonyms,
                             chat::ClientEventData_ClientEventType eventType);
   void broadcastClientEvent(const std::string &pseudonym,
                             chat::ClientEventData_ClientEventType eventType);
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   std::condition_variable messageCv_;
   std::vector<chat::InformClientsNewMessageResponse> messageHistory_;
   std::condition_variable clientEventCv_;

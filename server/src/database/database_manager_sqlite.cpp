@@ -126,6 +126,50 @@ OptionalErrorMessage DatabaseManagerSQLite::incrementTxMessage(
   return std::nullopt;
 }
 
+[[nodiscard]] OptionalErrorMessage
+DatabaseManagerSQLite::updateCumulatedConnectionTime(
+    const std::string &pseudonymStd, uint64_t durationInSec) noexcept {
+  if (const auto error = ensureOpen(); error.has_value()) {
+    return error;
+  }
+
+  try {
+    SQLite::Statement queryCheck(
+        *db_, std::string("SELECT cumulated_connection_time_sec FROM ") +
+                  statisticsTable_ + " WHERE pseudonym = ?;");
+    queryCheck.bind(1, pseudonymStd);
+
+    if (queryCheck.executeStep()) {
+      const uint64_t current =
+          static_cast<uint64_t>(queryCheck.getColumn(0).getInt64());
+      const uint64_t updated = current + durationInSec;
+
+      SQLite::Statement queryUpdate(
+          *db_, std::string("UPDATE ") + statisticsTable_ +
+                    " SET cumulated_connection_time_sec = ? WHERE pseudonym = "
+                    "?;");
+      queryUpdate.bind(1, static_cast<int64_t>(updated));
+      queryUpdate.bind(2, pseudonymStd);
+
+      queryUpdate.exec();
+      std::cout << "Incremented cumulated_connection_time_sec to '" << updated
+                << "' for: " << pseudonymStd << std::endl;
+      return std::nullopt;
+    }
+
+    return std::string(
+               "Incremented cumulated_connection_time_sec skipped because "
+               "pseudonym ('") +
+           pseudonymStd +
+           "') primary key does not exist in the db table 'Statistics'.";
+  } catch (const std::exception &ex) {
+    return std::string("Failed to update cumulated connection time: ") +
+           ex.what();
+  }
+
+  return std::nullopt;
+}
+
 OptionalErrorMessage
 DatabaseManagerSQLite::printStatisticsTableContent() noexcept {
   if (const auto error = ensureOpen(); error.has_value()) {

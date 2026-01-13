@@ -60,6 +60,19 @@ grpc::Status ChatService::Disconnect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
+  // update connection time for the user before disconnecting
+  if (const auto connectionDuration =
+          chatRoom_.getConnectionDuration(peerAddress)) {
+    const auto db = getSharedDatabaseRepository();
+    if (const auto error = db->updateCumulatedConnectionTime(
+            pseudonym, static_cast<uint64_t>(
+                           std::chrono::duration_cast<std::chrono::seconds>(
+                               *connectionDuration)
+                               .count()))) {
+      std::cerr << *error << std::endl;
+    }
+  }
+  // disconnect the user
   chatRoom_.disconnectClient(pseudonym);
 
   std::cout << "'" + pseudonym + "' is disconnected" << std::endl;

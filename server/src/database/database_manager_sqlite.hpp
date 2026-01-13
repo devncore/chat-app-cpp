@@ -31,6 +31,9 @@ public:
   [[nodiscard]] OptionalErrorMessage
   incrementTxMessage(const std::string &pseudonymStd) noexcept override;
   [[nodiscard]] OptionalErrorMessage
+  updateCumulatedConnectionTime(const std::string &pseudonymStd,
+                                uint64_t durationInSec) noexcept override;
+  [[nodiscard]] OptionalErrorMessage
   printStatisticsTableContent() noexcept override;
 
 private:
