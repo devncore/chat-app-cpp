@@ -4,7 +4,8 @@
 #include "service/chat_service_grpc.hpp"
 #include "ui/chat_window.hpp"
 
-static QString getServerAddressFromArguments(const QApplication &app) {
+namespace {
+QString getServerAddressFromArguments(const QApplication &app) {
   QCommandLineParser parser;
   parser.setApplicationDescription("Chat gRPC client");
   parser.addHelpOption();
@@ -16,6 +17,7 @@ static QString getServerAddressFromArguments(const QApplication &app) {
 
   return parser.value(serverOption);
 }
+} // namespace
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);

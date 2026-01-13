@@ -66,11 +66,16 @@ int main(int argc, char **argv) {
       throw std::runtime_error("Failed to create DatabaseManagerSQLite: " +
                                databaseManagerOrError.error());
     }
+    if (const auto error =
+            (*databaseManagerOrError)->printStatisticsTableContent()) {
+      throw std::runtime_error("Failed to print statistics table content: " +
+                               error.value());
+    }
 
     // grpc thread configuration, instanciation and start
     std::thread grpcThread([dbMngrGrpc = *databaseManagerOrError,
                             serverAddress]() {
-      ChatService service(dbMngrGrpc);
+      ChatService service = ChatService(dbMngrGrpc);
       grpc::ServerBuilder builder;
       builder.AddListeningPort(serverAddress.value(),
                                grpc::InsecureServerCredentials());

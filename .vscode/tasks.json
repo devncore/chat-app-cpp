@@ -33,17 +33,11 @@
       "detail": "Configure the root CMake project"
     },
     {
-      "label": "configure_root_compdb",
-      "type": "shell",
-      "command": "cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-      "detail": "Configure the root CMake project with compile_commands.json"
-    },
-    {
       "label": "clang_tidy",
       "type": "shell",
-      "command": "run-clang-tidy -p build",
+      "command": "mkdir -p temp && run-clang-tidy -p build -export-fixes temp/clang-tidy-report.yaml -extra-arg-before=-isystem -extra-arg-before=/usr/include -extra-arg=-Wno-system-headers $(rg --files -g \"*.cpp\" client server common)",
       "dependsOn": [
-        "configure_root_compdb"
+        "configure_root"
       ],
       "detail": "Run clang-tidy on the codebase"
     },

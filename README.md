@@ -1,28 +1,47 @@
 # Chat Project
 
 ## Overview
-A gRPC-based chat system with a Qt client UI and a Qt-backed server that tracks
+A gRPC-based chat system with a Qt client UI and a C++ server that tracks
 clients, streams messages, and stores lightweight statistics in SQLite.
+
+## Context
+This is a showcase project for recruiters and engineering teams. I use it to
+demonstrate and promote my C++ skills.
+
+## Tech Stack Rationale
+- Client:
+  - **Qt Widgets/Core**: UI and event loop integration.
+  - **gRPC**: streaming RPC transport.
+- Server:
+  - **gRPC**: service layer and streaming endpoints.
+  - **SQLiteCpp**: C++ wrapper for SQLite access.
+  - **std::thread/std::mutex**: concurrency primitives.
+  - **design pattern used**: factory
+- Common:
+  - **CMake**: portable builds and shared proto generation.
+  - **Git**: version control.
+  - **VS Code `tasks.json`**: repeatable build/run/tidy/format tasks.
+  - **clang-tidy**: static analysis.
+  - **clang-format**: formatting consistency.
 
 ## Architecture
 
 ```
              +--------------------+
              |   Qt Client (UI)   |
-             |  ChatWindow (UI)   |
+             |   ChatWindow       |
              +---------+----------+
                        |
-                       | ChatClientSession (interface)
+                       | ChatServiceGrpc
                        v
              +---------+----------+
-             |  ChatService    |
              |  gRPC transport    |
              +---------+----------+
                        |
                        | gRPC (protobuf)
                        v
              +---------+----------+
-             |   ChatServiceImpl  |
+             |   ChatService      |
              |  gRPC service      |
              +---------+----------+
                        |
@@ -35,10 +54,10 @@ clients, streams messages, and stores lightweight statistics in SQLite.
                        |
                        | IDatabaseManager
                        v
-             +---------+----------+
-             | DatabaseManagerSQLite    |
-             |  Qt + SQLite       |
-             +--------------------+
+             +-----------------------+
+             | DatabaseManagerSQLite |
+             | SQLiteCpp + SQLite    |
+             +-----------------------+
 ```
 
 ## Build Instructions
@@ -70,12 +89,6 @@ cmake -S server -B server/build
 cmake --build server/build
 ./server/build/chat_server --listen=0.0.0.0:50051
 ```
-
-## Tech Stack Rationale
-- Qt (Widgets/Core/Sql): cross-platform UI and event loop integration.
-- gRPC + protobuf: typed, streaming RPC for low-latency chat updates.
-- SQLite (via QSqlDatabase): lightweight persistence for connection stats.
-- CMake: portable builds and shared proto generation.
 
 ## Naming Conventions
 - Files: `lower_snake_case` for `.cpp`/`.hpp`.

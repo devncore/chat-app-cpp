@@ -14,7 +14,7 @@ Checks: >
   -readability-magic-numbers,
   -readability-function-size,
   -readability-identifier-length
-HeaderFilterRegex: '.*(client|server|common)/.*'
+HeaderFilterRegex: '^(?!.*build/common/generated/).*(client|server|common)/.*'
 WarningsAsErrors: ''
 FormatStyle: file
 CheckOptions:
