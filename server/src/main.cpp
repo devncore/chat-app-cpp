@@ -1,15 +1,11 @@
-#include <grpcpp/grpcpp.h>
-
 #include <boost/program_options.hpp>
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <string>
-#include <thread>
 
 #include "database/database_manager.hpp"
 #include "database/database_manager_factory.hpp"
-#include "service/chat_service.hpp"
+#include "grpc/grpc_runner.hpp"
 
 class ArgumentParser {
 public:
@@ -72,28 +68,7 @@ int main(int argc, char **argv) {
                                error.value());
     }
 
-    // grpc thread configuration, instanciation and start
-    std::thread grpcThread([dbMngrGrpc = *databaseManagerOrError,
-                            serverAddress]() {
-      ChatService service = ChatService(dbMngrGrpc);
-      grpc::ServerBuilder builder;
-      builder.AddListeningPort(serverAddress.value(),
-                               grpc::InsecureServerCredentials());
-      builder.RegisterService(&service);
-
-      std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-      if (!server) {
-        throw std::runtime_error("Failed to start gRPC server.");
-      }
-
-      std::cout << "Server listening on " << serverAddress.value() << std::endl;
-      server->Wait();
-
-      return 0;
-    });
-
-    // clean-up
-    grpcThread.join();
+    GrpcRunner grpcServer(*databaseManagerOrError, serverAddress.value());
     return 0;
 
   } catch (const std::exception &ex) {
