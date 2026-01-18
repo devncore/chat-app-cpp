@@ -6,12 +6,13 @@
 #include <grpcpp/grpcpp.h>
 
 #include "chat.grpc.pb.h"
-#include "database/database_manager.hpp"
 #include "domain/chat_room.hpp"
+#include "service/events/chat_service_events_dispatcher.hpp"
 
 class ChatService final : public chat::ChatService::Service {
 public:
-  explicit ChatService(std::weak_ptr<database::IDatabaseManager> db);
+  ChatService(std::shared_ptr<domain::ChatRoom> chatRoom,
+              events::EventDispatcher *eventDispatcher);
 
   grpc::Status Connect(grpc::ServerContext *context,
                        const chat::ConnectRequest *request,
@@ -36,9 +37,6 @@ public:
       grpc::ServerWriter<chat::ClientEventData> *writer) override;
 
 private:
-  domain::ChatRoom chatRoom_;
-  std::weak_ptr<database::IDatabaseManager> db_;
-
-  std::shared_ptr<database::IDatabaseManager>
-  getSharedDatabaseRepository() const;
+  std::shared_ptr<domain::ChatRoom> chatRoom_;
+  events::EventDispatcher *eventDispatcher_;
 };

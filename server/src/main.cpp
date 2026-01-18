@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
     }
 
     GrpcRunner grpcServer(*databaseManagerOrError, serverAddress.value());
+    grpcServer.wait();
     return 0;
 
   } catch (const std::exception &ex) {

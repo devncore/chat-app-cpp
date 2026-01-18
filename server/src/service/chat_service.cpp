@@ -1,14 +1,13 @@
 #include "service/chat_service.hpp"
 
-#include <chrono>
 #include <format>
 #include <iostream>
 #include <string>
-#include <utility>
 #include <vector>
 
-ChatService::ChatService(std::weak_ptr<database::IDatabaseManager> db)
-    : db_(std::move(db)) {}
+ChatService::ChatService(std::shared_ptr<domain::ChatRoom> chatRoom,
+                         events::EventDispatcher *eventDispatcher)
+    : chatRoom_(std::move(chatRoom)), eventDispatcher_(eventDispatcher) {}
 
 grpc::Status ChatService::Connect(grpc::ServerContext *context,
                                   const chat::ConnectRequest *request,
@@ -19,26 +18,28 @@ grpc::Status ChatService::Connect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  const std::string peerAddress = context ? context->peer() : std::string{};
+  const std::string peerAddress =
+      (context != nullptr) ? context->peer() : std::string{};
   if (peerAddress.empty()) {
     response->set_accepted(false);
     response->set_message("peer information is required");
     return grpc::Status::OK;
   }
 
-  const domain::ConnectResult result = chatRoom_.connectClient(
+  const domain::ConnectResult result = chatRoom_->connectClient(
       peerAddress, request->pseudonym(), request->gender(), request->country());
 
   response->set_accepted(result.accepted);
   response->set_message(result.message);
   std::cout << result.message << std::endl;
 
+  // Notify all observers (database logger, etc.) only if accepted
   if (result.accepted) {
-    const auto db = getSharedDatabaseRepository();
-    if (const auto error = db->clientConnectionEvent(request->pseudonym());
-        error.has_value()) {
-      std::cerr << *error << std::endl;
-    }
+    events::ClientConnectedEvent event{.peer = peerAddress,
+                                       .pseudonym = request->pseudonym(),
+                                       .gender = request->gender(),
+                                       .country = request->country()};
+    eventDispatcher_->notifyClientConnected(event);
   }
 
   return grpc::Status::OK;
@@ -55,27 +56,28 @@ grpc::Status ChatService::Disconnect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  const std::string peerAddress = context ? context->peer() : std::string{};
+  const std::string peerAddress =
+      (context != nullptr) ? context->peer() : std::string{};
   if (peerAddress.empty()) {
     return grpc::Status::OK;
   }
 
-  // update connection time for the user before disconnecting
-  if (const auto connectionDuration =
-          chatRoom_.getConnectionDuration(peerAddress)) {
-    const auto db = getSharedDatabaseRepository();
-    if (const auto error = db->updateCumulatedConnectionTime(
-            pseudonym, static_cast<uint64_t>(
-                           std::chrono::duration_cast<std::chrono::seconds>(
-                               *connectionDuration)
-                               .count()))) {
-      std::cerr << *error << std::endl;
-    }
-  }
-  // disconnect the user
-  chatRoom_.disconnectClient(pseudonym);
+  // Get connection duration before disconnecting
+  const auto connectionDuration = chatRoom_->getConnectionDuration(peerAddress);
+
+  // Disconnect the user
+  chatRoom_->disconnectClient(pseudonym);
 
   std::cout << "'" + pseudonym + "' is disconnected" << std::endl;
+
+  // Notify all observers of disconnection
+  if (connectionDuration.has_value()) {
+    events::ClientDisconnectedEvent event{.peer = peerAddress,
+                                          .pseudonym = pseudonym,
+                                          .connectionDuration =
+                                              *connectionDuration};
+    eventDispatcher_->notifyClientDisconnected(event);
+  }
 
   return grpc::Status::OK;
 }
@@ -88,31 +90,32 @@ grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
                         "message content is required");
   }
 
-  const std::string peer = context ? context->peer() : std::string{};
+  const std::string peer =
+      (context != nullptr) ? context->peer() : std::string{};
   if (peer.empty()) {
     return grpc::Status(grpc::StatusCode::UNAUTHENTICATED,
                         "peer information missing");
   }
 
   std::string pseudonym;
-  if (!chatRoom_.getPseudonymForPeer(peer, &pseudonym)) {
+  if (!chatRoom_->getPseudonymForPeer(peer, &pseudonym)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
 
-  if (response) {
+  if (response != nullptr) {
     response->Clear();
   }
 
   std::cout << std::format("[{}] {}", pseudonym, request->content())
             << std::endl;
 
-  chatRoom_.addMessage(pseudonym, request->content());
+  chatRoom_->addMessage(pseudonym, request->content());
 
-  const auto db = getSharedDatabaseRepository();
-  if (const auto error = db->incrementTxMessage(pseudonym); error.has_value()) {
-    std::cerr << *error << std::endl;
-  }
+  // Notify all observers (e.g., database logger)
+  events::MessageSentEvent event{
+      .peer = peer, .pseudonym = pseudonym, .content = request->content()};
+  eventDispatcher_->notifyMessageSent(event);
 
   return grpc::Status::OK;
 }
@@ -126,13 +129,14 @@ grpc::Status ChatService::SubscribeMessages(
                         "request is required");
   }
 
-  const std::string peer = context ? context->peer() : std::string{};
+  const std::string peer =
+      (context != nullptr) ? context->peer() : std::string{};
   if (peer.empty()) {
     return grpc::Status(grpc::StatusCode::UNAUTHENTICATED,
                         "peer information missing");
   }
 
-  if (!chatRoom_.normalizeMessageIndex(peer)) {
+  if (!chatRoom_->normalizeMessageIndex(peer)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
@@ -145,7 +149,7 @@ grpc::Status ChatService::SubscribeMessages(
 
     chat::InformClientsNewMessageResponse nextMessage;
     const domain::NextMessageStatus status =
-        chatRoom_.nextMessage(peer, 200ms, &nextMessage);
+        chatRoom_->nextMessage(peer, 200ms, &nextMessage);
 
     if (status == domain::NextMessageStatus::kPeerMissing) {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
@@ -172,14 +176,15 @@ grpc::Status ChatService::SubscribeClientEvents(
                         "writer is required");
   }
 
-  const std::string peer = context ? context->peer() : std::string{};
+  const std::string peer =
+      (context != nullptr) ? context->peer() : std::string{};
   if (peer.empty()) {
     return grpc::Status(grpc::StatusCode::UNAUTHENTICATED,
                         "peer information missing");
   }
 
   std::vector<std::string> connectedPseudonyms;
-  if (!chatRoom_.getInitialRoster(peer, &connectedPseudonyms)) {
+  if (!chatRoom_->getInitialRoster(peer, &connectedPseudonyms)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
@@ -205,7 +210,7 @@ grpc::Status ChatService::SubscribeClientEvents(
 
     chat::ClientEventData nextEvent;
     const domain::NextClientEventStatus status =
-        chatRoom_.nextClientEvent(peer, 200ms, &nextEvent);
+        chatRoom_->nextClientEvent(peer, 200ms, &nextEvent);
 
     if (status == domain::NextClientEventStatus::kPeerMissing) {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
@@ -221,13 +226,4 @@ grpc::Status ChatService::SubscribeClientEvents(
                           "failed to write to client stream");
     }
   }
-}
-
-std::shared_ptr<database::IDatabaseManager>
-ChatService::getSharedDatabaseRepository() const {
-  auto db = db_.lock();
-  if (!db) {
-    throw std::runtime_error("Database repository is no longer available");
-  }
-  return db;
 }
