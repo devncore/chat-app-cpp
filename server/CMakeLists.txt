@@ -23,7 +23,9 @@ endif()
 add_executable(chat_server
     src/main.cpp
     src/database/database_manager_sqlite.cpp
-    src/domain/chat_room.cpp
+    src/domain/client_registry.cpp
+    src/domain/message_broadcaster.cpp
+    src/domain/client_event_broadcaster.cpp
     src/grpc/grpc_runner.cpp
     src/service/chat_service.cpp
 )

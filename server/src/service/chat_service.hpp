@@ -6,13 +6,18 @@
 #include <grpcpp/grpcpp.h>
 
 #include "chat.grpc.pb.h"
-#include "domain/chat_room.hpp"
+#include "domain/client_event_broadcaster.hpp"
+#include "domain/client_registry.hpp"
+#include "domain/message_broadcaster.hpp"
 #include "service/events/chat_service_events_dispatcher.hpp"
 
 class ChatService final : public chat::ChatService::Service {
 public:
-  ChatService(std::shared_ptr<domain::ChatRoom> chatRoom,
+  ChatService(std::shared_ptr<domain::ClientRegistry> clientRegistry,
+              std::shared_ptr<domain::IMessageBroadcaster> messageBroadcaster,
+              std::shared_ptr<domain::IClientEventBroadcaster> clientEventBroadcaster,
               events::EventDispatcher *eventDispatcher);
+  ~ChatService() override;
 
   grpc::Status Connect(grpc::ServerContext *context,
                        const chat::ConnectRequest *request,
@@ -37,6 +42,8 @@ public:
       grpc::ServerWriter<chat::ClientEventData> *writer) override;
 
 private:
-  std::shared_ptr<domain::ChatRoom> chatRoom_;
+  std::shared_ptr<domain::ClientRegistry> clientRegistry_;
+  std::shared_ptr<domain::IMessageBroadcaster> messageBroadcaster_;
+  std::shared_ptr<domain::IClientEventBroadcaster> clientEventBroadcaster_;
   events::EventDispatcher *eventDispatcher_;
 };

@@ -8,7 +8,9 @@
 
 #include "database/database_event_logger.hpp"
 #include "database/database_manager.hpp"
-#include "domain/chat_room.hpp"
+#include "domain/client_event_broadcaster.hpp"
+#include "domain/client_registry.hpp"
+#include "domain/message_broadcaster.hpp"
 #include "service/chat_service.hpp"
 #include "service/events/chat_service_events_dispatcher.hpp"
 
@@ -26,8 +28,14 @@ public:
   GrpcRunner &operator=(GrpcRunner &&) = delete;
 
 private:
-  // Domain objects (owned here)
-  std::shared_ptr<domain::ChatRoom> chatRoom_;
+  // Client registry (single source of truth)
+  std::shared_ptr<domain::ClientRegistry> clientRegistry_;
+
+  // Domain components
+  std::shared_ptr<domain::MessageBroadcaster> messageBroadcaster_;
+  std::shared_ptr<domain::ClientEventBroadcaster> clientEventBroadcaster_;
+
+  // Observers
   std::shared_ptr<observers::DatabaseEventLogger> dbLogger_;
 
   // Event dispatcher

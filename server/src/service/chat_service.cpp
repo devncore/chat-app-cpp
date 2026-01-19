@@ -2,12 +2,18 @@
 
 #include <format>
 #include <iostream>
-#include <string>
-#include <vector>
 
-ChatService::ChatService(std::shared_ptr<domain::ChatRoom> chatRoom,
-                         events::EventDispatcher *eventDispatcher)
-    : chatRoom_(std::move(chatRoom)), eventDispatcher_(eventDispatcher) {}
+ChatService::ChatService(
+    std::shared_ptr<domain::ClientRegistry> clientRegistry,
+    std::shared_ptr<domain::IMessageBroadcaster> messageBroadcaster,
+    std::shared_ptr<domain::IClientEventBroadcaster> clientEventBroadcaster,
+    events::EventDispatcher *eventDispatcher)
+    : clientRegistry_(std::move(clientRegistry)),
+      messageBroadcaster_(std::move(messageBroadcaster)),
+      clientEventBroadcaster_(std::move(clientEventBroadcaster)),
+      eventDispatcher_(eventDispatcher) {}
+
+ChatService::~ChatService() = default;
 
 grpc::Status ChatService::Connect(grpc::ServerContext *context,
                                   const chat::ConnectRequest *request,
@@ -26,21 +32,23 @@ grpc::Status ChatService::Connect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  const domain::ConnectResult result = chatRoom_->connectClient(
-      peerAddress, request->pseudonym(), request->gender(), request->country());
-
-  response->set_accepted(result.accepted);
-  response->set_message(result.message);
-  std::cout << result.message << std::endl;
-
-  // Notify all observers (database logger, etc.) only if accepted
-  if (result.accepted) {
-    events::ClientConnectedEvent event{.peer = peerAddress,
-                                       .pseudonym = request->pseudonym(),
-                                       .gender = request->gender(),
-                                       .country = request->country()};
-    eventDispatcher_->notifyClientConnected(event);
+  if (!clientRegistry_->isPseudonymAvailable(peerAddress, request->pseudonym())) {
+    response->set_accepted(false);
+    response->set_message(
+        "The pseudo you are using is already in use, please choose another one");
+    return grpc::Status::OK;
   }
+
+  response->set_accepted(true);
+  response->set_message("New client '" + request->pseudonym() +
+                        "' is now connected");
+  std::cout << response->message() << std::endl;
+
+  events::ClientConnectedEvent event{.peer = peerAddress,
+                                     .pseudonym = request->pseudonym(),
+                                     .gender = request->gender(),
+                                     .country = request->country()};
+  eventDispatcher_->notifyClientConnected(event);
 
   return grpc::Status::OK;
 }
@@ -62,15 +70,11 @@ grpc::Status ChatService::Disconnect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  // Get connection duration before disconnecting
-  const auto connectionDuration = chatRoom_->getConnectionDuration(peerAddress);
-
-  // Disconnect the user
-  chatRoom_->disconnectClient(pseudonym);
+  const auto connectionDuration =
+      clientRegistry_->getConnectionDuration(peerAddress);
 
   std::cout << "'" + pseudonym + "' is disconnected" << std::endl;
 
-  // Notify all observers of disconnection
   if (connectionDuration.has_value()) {
     events::ClientDisconnectedEvent event{.peer = peerAddress,
                                           .pseudonym = pseudonym,
@@ -98,7 +102,7 @@ grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
   }
 
   std::string pseudonym;
-  if (!chatRoom_->getPseudonymForPeer(peer, &pseudonym)) {
+  if (!clientRegistry_->getPseudonymForPeer(peer, &pseudonym)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
@@ -110,9 +114,6 @@ grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
   std::cout << std::format("[{}] {}", pseudonym, request->content())
             << std::endl;
 
-  chatRoom_->addMessage(pseudonym, request->content());
-
-  // Notify all observers (e.g., database logger)
   events::MessageSentEvent event{
       .peer = peer, .pseudonym = pseudonym, .content = request->content()};
   eventDispatcher_->notifyMessageSent(event);
@@ -136,7 +137,7 @@ grpc::Status ChatService::SubscribeMessages(
                         "peer information missing");
   }
 
-  if (!chatRoom_->normalizeMessageIndex(peer)) {
+  if (!messageBroadcaster_->normalizeMessageIndex(peer)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
@@ -149,7 +150,7 @@ grpc::Status ChatService::SubscribeMessages(
 
     chat::InformClientsNewMessageResponse nextMessage;
     const domain::NextMessageStatus status =
-        chatRoom_->nextMessage(peer, 200ms, &nextMessage);
+        messageBroadcaster_->nextMessage(peer, 200ms, &nextMessage);
 
     if (status == domain::NextMessageStatus::kPeerMissing) {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
@@ -183,11 +184,15 @@ grpc::Status ChatService::SubscribeClientEvents(
                         "peer information missing");
   }
 
-  std::vector<std::string> connectedPseudonyms;
-  if (!chatRoom_->getInitialRoster(peer, &connectedPseudonyms)) {
+  if (!clientRegistry_->isPeerConnected(peer)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
+
+  clientEventBroadcaster_->normalizeClientEventIndex(peer);
+
+  std::vector<std::string> connectedPseudonyms =
+      clientRegistry_->getConnectedPseudonyms();
 
   if (!connectedPseudonyms.empty()) {
     chat::ClientEventData initialRoster;
@@ -210,7 +215,7 @@ grpc::Status ChatService::SubscribeClientEvents(
 
     chat::ClientEventData nextEvent;
     const domain::NextClientEventStatus status =
-        chatRoom_->nextClientEvent(peer, 200ms, &nextEvent);
+        clientEventBroadcaster_->nextClientEvent(peer, 200ms, &nextEvent);
 
     if (status == domain::NextClientEventStatus::kPeerMissing) {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
