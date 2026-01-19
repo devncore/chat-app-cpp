@@ -41,3 +41,10 @@ target_link_libraries(chat_server
         Boost::program_options
         SQLiteCpp
 )
+
+# Unit tests (build with -DBUILD_TESTS=ON)
+option(BUILD_TESTS "Build unit tests" OFF)
+
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()

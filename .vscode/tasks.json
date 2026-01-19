@@ -27,6 +27,21 @@
       "detail": "Build and run the Qt server executable from the root build"
     },
     {
+      "label": "configure_server_tests",
+      "type": "shell",
+      "command": "cmake -S . -B build -DBUILD_TESTS=ON",
+      "detail": "Configure CMake with tests enabled"
+    },
+    {
+      "label": "build_and_run_server_unit_tests",
+      "type": "shell",
+      "command": "cmake --build build --target chat_server_tests && ctest --test-dir build/server/tests --output-on-failure",
+      "dependsOn": [
+        "configure_server_tests"
+      ],
+      "detail": "Build and run server unit tests"
+    },
+    {
       "label": "configure_root",
       "type": "shell",
       "command": "cmake -S . -B build",
