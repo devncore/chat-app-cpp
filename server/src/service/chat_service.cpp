@@ -44,6 +44,12 @@ grpc::Status ChatService::Connect(grpc::ServerContext *context,
                         "' is now connected");
   std::cout << response->message() << std::endl;
 
+  // Populate the initial roster of connected pseudonyms
+  const auto connectedPseudonyms = clientRegistry_->getConnectedPseudonyms();
+  for (const auto &name : connectedPseudonyms) {
+    response->add_connected_pseudonyms(name);
+  }
+
   events::ClientConnectedEvent event{.peer = peerAddress,
                                      .pseudonym = request->pseudonym(),
                                      .gender = request->gender(),
@@ -190,22 +196,6 @@ grpc::Status ChatService::SubscribeClientEvents(
   }
 
   clientEventBroadcaster_->normalizeClientEventIndex(peer);
-
-  std::vector<std::string> connectedPseudonyms =
-      clientRegistry_->getConnectedPseudonyms();
-
-  if (!connectedPseudonyms.empty()) {
-    chat::ClientEventData initialRoster;
-    initialRoster.set_event_type(chat::ClientEventData::SYNC);
-    for (const auto &name : connectedPseudonyms) {
-      initialRoster.add_pseudonyms(name);
-    }
-
-    if (!writer->Write(initialRoster)) {
-      return grpc::Status(grpc::StatusCode::UNKNOWN,
-                          "failed to write initial roster");
-    }
-  }
 
   using namespace std::chrono_literals;
   while (true) {

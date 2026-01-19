@@ -21,7 +21,18 @@ void ChatServiceGrpc::connectToServer(const QString &pseudonym,
       ok ? QString{} : QString::fromStdString(result.status.error_message());
   const QString message = QString::fromStdString(result.response.message());
 
-  emit connectFinished(ok, errorText, result.response.accepted(), message);
+  // Extract connected pseudonyms from response
+  QStringList connectedPseudonyms;
+  connectedPseudonyms.reserve(result.response.connected_pseudonyms_size());
+  for (const auto &name : result.response.connected_pseudonyms()) {
+    const auto qName = QString::fromStdString(name).trimmed();
+    if (!qName.isEmpty()) {
+      connectedPseudonyms.append(qName);
+    }
+  }
+
+  emit connectFinished(ok, errorText, result.response.accepted(), message,
+                       connectedPseudonyms);
 }
 
 void ChatServiceGrpc::disconnectFromServer(const QString &pseudonym) {
@@ -61,16 +72,12 @@ void ChatServiceGrpc::stopMessageStreamSlot() { stopMessageStream(); }
 void ChatServiceGrpc::startClientEventStreamSlot() {
   startClientEventStream(
       [this](const chat::ClientEventData &incoming) {
-        QStringList names;
-        names.reserve(incoming.pseudonyms_size());
-        for (const auto &entry : incoming.pseudonyms()) {
-          const auto name = QString::fromStdString(entry).trimmed();
-          if (!name.isEmpty()) {
-            names.append(name);
-          }
+        const QString name =
+            QString::fromStdString(incoming.pseudonym()).trimmed();
+        if (!name.isEmpty()) {
+          emit clientEventReceived(static_cast<int>(incoming.event_type()),
+                                   name);
         }
-        emit clientEventReceived(static_cast<int>(incoming.event_type()),
-                                 names);
       },
       [this](const std::string &errorText) {
         if (errorText.empty()) {

@@ -72,8 +72,7 @@ TEST_F(ClientEventBroadcasterTest, NextClientEvent_HasEvent_ReturnsOk) {
 
   EXPECT_EQ(status, NextClientEventStatus::kOk);
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
-  ASSERT_EQ(response.pseudonyms_size(), 1);
-  EXPECT_EQ(response.pseudonyms(0), "bob");
+  EXPECT_EQ(response.pseudonym(), "bob");
 }
 
 TEST_F(ClientEventBroadcasterTest,
@@ -92,19 +91,19 @@ TEST_F(ClientEventBroadcasterTest,
   auto status1 = broadcaster_->nextClientEvent("peer1",
                                                std::chrono::milliseconds(0), &response);
   EXPECT_EQ(status1, NextClientEventStatus::kOk);
-  EXPECT_EQ(response.pseudonyms(0), "bob");
+  EXPECT_EQ(response.pseudonym(), "bob");
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
 
   auto status2 = broadcaster_->nextClientEvent("peer1",
                                                std::chrono::milliseconds(0), &response);
   EXPECT_EQ(status2, NextClientEventStatus::kOk);
-  EXPECT_EQ(response.pseudonyms(0), "charlie");
+  EXPECT_EQ(response.pseudonym(), "charlie");
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
 
   auto status3 = broadcaster_->nextClientEvent("peer1",
                                                std::chrono::milliseconds(0), &response);
   EXPECT_EQ(status3, NextClientEventStatus::kOk);
-  EXPECT_EQ(response.pseudonyms(0), "bob");
+  EXPECT_EQ(response.pseudonym(), "bob");
   EXPECT_EQ(response.event_type(), chat::ClientEventData::REMOVE);
 }
 
@@ -138,12 +137,12 @@ TEST_F(ClientEventBroadcasterTest,
   auto status1 = broadcaster_->nextClientEvent("peer1",
                                                std::chrono::milliseconds(0), &response1);
   EXPECT_EQ(status1, NextClientEventStatus::kOk);
-  EXPECT_EQ(response1.pseudonyms(0), "charlie");
+  EXPECT_EQ(response1.pseudonym(), "charlie");
 
   auto status2 = broadcaster_->nextClientEvent("peer2",
                                                std::chrono::milliseconds(0), &response2);
   EXPECT_EQ(status2, NextClientEventStatus::kOk);
-  EXPECT_EQ(response2.pseudonyms(0), "charlie");
+  EXPECT_EQ(response2.pseudonym(), "charlie");
 }
 
 TEST_F(ClientEventBroadcasterTest,
@@ -292,7 +291,7 @@ TEST_F(ClientEventBroadcasterTest,
 
   EXPECT_EQ(status, NextClientEventStatus::kOk);
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
-  EXPECT_EQ(response.pseudonyms(0), "bob");
+  EXPECT_EQ(response.pseudonym(), "bob");
 }
 
 TEST_F(ClientEventBroadcasterTest,
@@ -315,7 +314,7 @@ TEST_F(ClientEventBroadcasterTest,
 
   EXPECT_EQ(status, NextClientEventStatus::kOk);
   EXPECT_EQ(response.event_type(), chat::ClientEventData::REMOVE);
-  EXPECT_EQ(response.pseudonyms(0), "bob");
+  EXPECT_EQ(response.pseudonym(), "bob");
 }
 
 TEST_F(ClientEventBroadcasterTest, OnMessageSent_NoOp) {

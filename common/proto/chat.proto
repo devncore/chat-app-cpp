@@ -19,10 +19,9 @@ message ClientEventData{
   enum ClientEventType {
   ADD = 0;
   REMOVE = 1;
-  SYNC = 2;
   }
 
-  repeated string pseudonyms = 1;
+  string pseudonym = 1;
   ClientEventType event_type = 2;
 }
 
@@ -37,6 +36,7 @@ message ConnectResponse {
   bool accepted = 1;
   string message = 2;
   repeated string previous_message_context = 3;
+  repeated string connected_pseudonyms = 4;
 }
 
 message DisconnectRequest {

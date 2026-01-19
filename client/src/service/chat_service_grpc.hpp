@@ -45,12 +45,13 @@ public:
 
 signals:
   void connectFinished(bool ok, const QString &errorText, bool accepted,
-                       const QString &message);
+                       const QString &message,
+                       const QStringList &connectedPseudonyms);
   void disconnectFinished(bool ok, const QString &errorText);
   void sendMessageFinished(bool ok, const QString &errorText);
   void messageReceived(const QString &author, const QString &content);
   void messageStreamError(const QString &errorText);
-  void clientEventReceived(int eventType, const QStringList &pseudonyms);
+  void clientEventReceived(int eventType, const QString &pseudonym);
   void clientEventStreamError(const QString &errorText);
 
 public slots:

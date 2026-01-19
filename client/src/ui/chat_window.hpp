@@ -35,12 +35,13 @@ signals:
 
 public slots:
   void onConnectFinished(bool ok, const QString &errorText, bool accepted,
-                         const QString &message);
+                         const QString &message,
+                         const QStringList &connectedPseudonyms);
   void onDisconnectFinished(bool ok, const QString &errorText);
   void onSendMessageFinished(bool ok, const QString &errorText);
   void onMessageReceived(const QString &author, const QString &content);
   void onMessageStreamError(const QString &errorText);
-  void onClientEventReceived(int eventType, const QStringList &pseudonyms);
+  void onClientEventReceived(int eventType, const QString &pseudonym);
   void onClientEventStreamError(const QString &errorText);
 
 private:
@@ -54,10 +55,11 @@ private:
                   QString color = "black");
   void handleSend();
   void handleConnect();
-  void switchToChatView(const QString &welcomeMessage);
+  void switchToChatView(const QString &welcomeMessage,
+                        const QStringList &connectedPseudonyms);
   bool addClientToList(const QString &pseudonym);
   bool removeClientFromList(const QString &pseudonym);
-  void handleClientEvent(int eventType, const QStringList &pseudonyms);
+  void handleClientEvent(int eventType, const QString &pseudonym);
   void startMessageStream();
   void stopMessageStream();
   void startClientEventStream();

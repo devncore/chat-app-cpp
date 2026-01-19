@@ -11,24 +11,13 @@ ClientEventBroadcaster::ClientEventBroadcaster(
 void ClientEventBroadcaster::broadcastClientEvent(
     const std::string &pseudonym,
     chat::ClientEventData_ClientEventType eventType) {
-  broadcastClientEvent(std::vector<std::string>{pseudonym}, eventType);
-}
-
-void ClientEventBroadcaster::broadcastClientEvent(
-    const std::vector<std::string> &pseudonyms,
-    chat::ClientEventData_ClientEventType eventType) {
-  chat::ClientEventData payload;
-  payload.set_event_type(eventType);
-
-  for (const auto &name : pseudonyms) {
-    if (!name.empty()) {
-      payload.add_pseudonyms(name);
-    }
-  }
-
-  if (payload.pseudonyms_size() == 0) {
+  if (pseudonym.empty()) {
     return;
   }
+
+  chat::ClientEventData payload;
+  payload.set_event_type(eventType);
+  payload.set_pseudonym(pseudonym);
 
   {
     std::lock_guard<std::mutex> lock(mutex_);

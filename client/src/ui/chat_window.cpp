@@ -195,7 +195,8 @@ void ChatWindow::handleConnect() {
 }
 
 void ChatWindow::onConnectFinished(bool ok, const QString &errorText,
-                                   bool accepted, const QString &message) {
+                                   bool accepted, const QString &message,
+                                   const QStringList &connectedPseudonyms) {
   connectButton_->setEnabled(true);
 
   if (!ok) {
@@ -214,7 +215,7 @@ void ChatWindow::onConnectFinished(bool ok, const QString &errorText,
   connected_ = true;
   setWindowTitle(QStringLiteral("Chat Client - %1")
                      .arg(pseudonymInput_->text().trimmed()));
-  switchToChatView(message);
+  switchToChatView(message, connectedPseudonyms);
   startMessageStream();
   startClientEventStream();
 }
@@ -250,8 +251,8 @@ void ChatWindow::onMessageStreamError(const QString &errorText) {
 }
 
 void ChatWindow::onClientEventReceived(int eventType,
-                                       const QStringList &pseudonyms) {
-  handleClientEvent(eventType, pseudonyms);
+                                       const QString &pseudonym) {
+  handleClientEvent(eventType, pseudonym);
 }
 
 void ChatWindow::onClientEventStreamError(const QString &errorText) {
@@ -262,12 +263,21 @@ void ChatWindow::onClientEventStreamError(const QString &errorText) {
              QStringLiteral("Client event stream stopped: %1").arg(errorText));
 }
 
-void ChatWindow::switchToChatView(const QString &welcomeMessage) {
+void ChatWindow::switchToChatView(const QString &welcomeMessage,
+                                  const QStringList &connectedPseudonyms) {
   stacked_->setCurrentWidget(chatView_);
   conversation_->clear();
   if (clientsList_) {
     clientsList_->clear();
+
+    // Add self first
     addClientToList(pseudonymInput_->text().trimmed());
+
+    // Add all other connected clients from initial roster
+    for (const auto &name : connectedPseudonyms) {
+      addClientToList(name);
+    }
+
     if (clientsList_->count() > 0) {
       clientsList_->setCurrentRow(0);
     }
@@ -331,50 +341,29 @@ bool ChatWindow::removeClientFromList(const QString &pseudonym) {
   return false;
 }
 
-void ChatWindow::handleClientEvent(int eventType,
-                                   const QStringList &pseudonyms) {
+void ChatWindow::handleClientEvent(int eventType, const QString &pseudonym) {
   if (!clientsList_) {
     return;
   }
 
-  if (pseudonyms.isEmpty()) {
+  if (pseudonym.isEmpty()) {
     return;
   }
 
   switch (eventType) {
   case chat::ClientEventData::ADD: {
-    for (const auto &name : pseudonyms) {
-      if (addClientToList(name)) {
-        addMessage("System", QStringLiteral("%1 joined the chat.").arg(name),
-                   MESSAGE_COLOR_USER_CONNECT_);
-      }
+    if (addClientToList(pseudonym)) {
+      addMessage("System",
+                 QStringLiteral("%1 joined the chat.").arg(pseudonym),
+                 MESSAGE_COLOR_USER_CONNECT_);
     }
     break;
   }
   case chat::ClientEventData::REMOVE: {
-    for (const auto &name : pseudonyms) {
-      if (removeClientFromList(name)) {
-        addMessage("System", QStringLiteral("%1 has left the chat.").arg(name),
-                   MESSAGE_COLOR_USER_DISCONNECT_);
-      }
-    }
-    break;
-  }
-  case chat::ClientEventData::SYNC: {
-    const auto previousSelection = clientsList_->currentItem()
-                                       ? clientsList_->currentItem()->text()
-                                       : QString{};
-    clientsList_->clear();
-    for (const auto &name : pseudonyms) {
-      addClientToList(name);
-    }
-
-    if (!previousSelection.isEmpty()) {
-      const auto matches = clientsList_->findItems(
-          previousSelection, Qt::MatchFixedString | Qt::MatchCaseSensitive);
-      if (!matches.isEmpty()) {
-        clientsList_->setCurrentItem(matches.first());
-      }
+    if (removeClientFromList(pseudonym)) {
+      addMessage("System",
+                 QStringLiteral("%1 has left the chat.").arg(pseudonym),
+                 MESSAGE_COLOR_USER_DISCONNECT_);
     }
     break;
   }

@@ -55,9 +55,6 @@ public:
   void onMessageSent(const events::MessageSentEvent &event) override;
 
 private:
-  void broadcastClientEvent(const std::vector<std::string> &pseudonyms,
-                            chat::ClientEventData_ClientEventType eventType);
-
   const ClientRegistry &clientRegistry_;
   mutable std::mutex mutex_;
   std::condition_variable clientEventCv_;
