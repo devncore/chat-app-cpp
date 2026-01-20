@@ -10,6 +10,7 @@
 #include "domain/client_registry.hpp"
 #include "domain/message_broadcaster.hpp"
 #include "service/events/chat_service_events_dispatcher.hpp"
+#include "service/validation/message_validation_chain.hpp"
 
 class ChatService final : public chat::ChatService::Service {
 public:
@@ -46,4 +47,5 @@ private:
   std::shared_ptr<domain::IMessageBroadcaster> messageBroadcaster_;
   std::shared_ptr<domain::IClientEventBroadcaster> clientEventBroadcaster_;
   events::EventDispatcher *eventDispatcher_;
+  service::validation::MessageValidationChain validationChain_;
 };

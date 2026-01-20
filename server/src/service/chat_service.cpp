@@ -3,6 +3,11 @@
 #include <format>
 #include <iostream>
 
+#include "service/validation/validators/content_validator.hpp"
+#include "service/validation/validators/rate_limit_validator.hpp"
+
+using namespace std::chrono_literals;
+
 ChatService::ChatService(
     std::shared_ptr<domain::ClientRegistry> clientRegistry,
     std::shared_ptr<domain::IMessageBroadcaster> messageBroadcaster,
@@ -11,7 +16,11 @@ ChatService::ChatService(
     : clientRegistry_(std::move(clientRegistry)),
       messageBroadcaster_(std::move(messageBroadcaster)),
       clientEventBroadcaster_(std::move(clientEventBroadcaster)),
-      eventDispatcher_(eventDispatcher) {}
+      eventDispatcher_(eventDispatcher) {
+  validationChain_
+      .add(std::make_shared<service::validation::ContentValidator>())
+      .add(std::make_shared<service::validation::RateLimitValidator>(1s));
+}
 
 ChatService::~ChatService() = default;
 
@@ -32,10 +41,11 @@ grpc::Status ChatService::Connect(grpc::ServerContext *context,
     return grpc::Status::OK;
   }
 
-  if (!clientRegistry_->isPseudonymAvailable(peerAddress, request->pseudonym())) {
+  if (!clientRegistry_->isPseudonymAvailable(peerAddress,
+                                             request->pseudonym())) {
     response->set_accepted(false);
-    response->set_message(
-        "The pseudo you are using is already in use, please choose another one");
+    response->set_message("The pseudo you are using is already in use, please "
+                          "choose another one");
     return grpc::Status::OK;
   }
 
@@ -95,9 +105,9 @@ grpc::Status ChatService::Disconnect(grpc::ServerContext *context,
 grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
                                       const chat::SendMessageRequest *request,
                                       google::protobuf::Empty *response) {
-  if (request == nullptr || request->content().empty()) {
+  if (request == nullptr) {
     return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
-                        "message content is required");
+                        "request is required");
   }
 
   const std::string peer =
@@ -111,6 +121,22 @@ grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
   if (!clientRegistry_->getPseudonymForPeer(peer, &pseudonym)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
+  }
+
+  // validate the message with validators
+  service::validation::ValidationContext validationCtx{
+      .peer = peer,
+      .pseudonym = pseudonym,
+      .content = request->content(),
+      .timestamp = std::chrono::steady_clock::now()};
+
+  const auto validationResult = validationChain_.validate(validationCtx);
+  if (!validationResult.valid) {
+    std::cerr << std::format("[{}] Message validation failed: {}", pseudonym,
+                             validationResult.errorMessage)
+              << std::endl;
+    return grpc::Status(validationResult.statusCode,
+                        validationResult.errorMessage);
   }
 
   if (response != nullptr) {
