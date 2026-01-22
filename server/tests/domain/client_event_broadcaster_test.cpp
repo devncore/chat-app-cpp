@@ -44,8 +44,9 @@ protected:
 
 TEST_F(ClientEventBroadcasterTest,
        NextClientEvent_PeerNotConnected_ReturnsPeerMissing) {
+  chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent(
-      "unknown_peer", std::chrono::milliseconds(0), nullptr);
+      "unknown_peer", std::chrono::milliseconds(0), response);
   EXPECT_EQ(status, NextClientEventStatus::kPeerMissing);
 }
 
@@ -53,8 +54,9 @@ TEST_F(ClientEventBroadcasterTest,
        NextClientEvent_NoEvents_ReturnsNoEvent) {
   connectClient("peer1", "alice");
 
+  chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(10), nullptr);
+                                              std::chrono::milliseconds(10), response);
   EXPECT_EQ(status, NextClientEventStatus::kNoEvent);
 }
 
@@ -62,13 +64,14 @@ TEST_F(ClientEventBroadcasterTest, NextClientEvent_HasEvent_ReturnsOk) {
   connectClient("peer1", "alice");
 
   // Initialize peer's index first
-  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::ClientEventData unused;
+  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), unused);
 
   broadcaster_->broadcastClientEvent("bob", chat::ClientEventData::ADD);
 
   chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(0), &response);
+                                              std::chrono::milliseconds(0), response);
 
   EXPECT_EQ(status, NextClientEventStatus::kOk);
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
@@ -80,7 +83,8 @@ TEST_F(ClientEventBroadcasterTest,
   connectClient("peer1", "alice");
 
   // Initialize peer's index first
-  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::ClientEventData unused;
+  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), unused);
 
   broadcaster_->broadcastClientEvent("bob", chat::ClientEventData::ADD);
   broadcaster_->broadcastClientEvent("charlie", chat::ClientEventData::ADD);
@@ -89,35 +93,22 @@ TEST_F(ClientEventBroadcasterTest,
   chat::ClientEventData response;
 
   auto status1 = broadcaster_->nextClientEvent("peer1",
-                                               std::chrono::milliseconds(0), &response);
+                                               std::chrono::milliseconds(0), response);
   EXPECT_EQ(status1, NextClientEventStatus::kOk);
   EXPECT_EQ(response.pseudonym(), "bob");
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
 
   auto status2 = broadcaster_->nextClientEvent("peer1",
-                                               std::chrono::milliseconds(0), &response);
+                                               std::chrono::milliseconds(0), response);
   EXPECT_EQ(status2, NextClientEventStatus::kOk);
   EXPECT_EQ(response.pseudonym(), "charlie");
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
 
   auto status3 = broadcaster_->nextClientEvent("peer1",
-                                               std::chrono::milliseconds(0), &response);
+                                               std::chrono::milliseconds(0), response);
   EXPECT_EQ(status3, NextClientEventStatus::kOk);
   EXPECT_EQ(response.pseudonym(), "bob");
   EXPECT_EQ(response.event_type(), chat::ClientEventData::REMOVE);
-}
-
-TEST_F(ClientEventBroadcasterTest, NextClientEvent_NullOutput_StillReturnsOk) {
-  connectClient("peer1", "alice");
-
-  // Initialize peer's index first
-  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), nullptr);
-
-  broadcaster_->broadcastClientEvent("bob", chat::ClientEventData::ADD);
-
-  auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(0), nullptr);
-  EXPECT_EQ(status, NextClientEventStatus::kOk);
 }
 
 TEST_F(ClientEventBroadcasterTest,
@@ -126,21 +117,23 @@ TEST_F(ClientEventBroadcasterTest,
   connectClient("peer2", "bob");
 
   // Initialize both peers' indices first
-  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), nullptr);
-  broadcaster_->nextClientEvent("peer2", std::chrono::milliseconds(0), nullptr);
+  chat::ClientEventData unused;
+  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), unused);
+  broadcaster_->nextClientEvent("peer2", std::chrono::milliseconds(0), unused);
 
   broadcaster_->broadcastClientEvent("charlie", chat::ClientEventData::ADD);
 
-  chat::ClientEventData response1, response2;
+  chat::ClientEventData response1;
+  chat::ClientEventData response2;
 
   // Both peers should see the event independently
   auto status1 = broadcaster_->nextClientEvent("peer1",
-                                               std::chrono::milliseconds(0), &response1);
+                                               std::chrono::milliseconds(0), response1);
   EXPECT_EQ(status1, NextClientEventStatus::kOk);
   EXPECT_EQ(response1.pseudonym(), "charlie");
 
   auto status2 = broadcaster_->nextClientEvent("peer2",
-                                               std::chrono::milliseconds(0), &response2);
+                                               std::chrono::milliseconds(0), response2);
   EXPECT_EQ(status2, NextClientEventStatus::kOk);
   EXPECT_EQ(response2.pseudonym(), "charlie");
 }
@@ -154,8 +147,9 @@ TEST_F(ClientEventBroadcasterTest,
     disconnectClient("alice");
   });
 
+  chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent(
-      "peer1", std::chrono::milliseconds(100), nullptr);
+      "peer1", std::chrono::milliseconds(100), response);
   disconnectThread.join();
 
   EXPECT_EQ(status, NextClientEventStatus::kPeerMissing);
@@ -169,8 +163,9 @@ TEST_F(ClientEventBroadcasterTest,
 
   broadcaster_->broadcastClientEvent("", chat::ClientEventData::ADD);
 
+  chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(10), nullptr);
+                                              std::chrono::milliseconds(10), response);
   EXPECT_EQ(status, NextClientEventStatus::kNoEvent);
 }
 
@@ -179,13 +174,14 @@ TEST_F(ClientEventBroadcasterTest,
   connectClient("peer1", "alice");
 
   // Initialize peer's index first
-  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::ClientEventData unused;
+  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), unused);
 
   broadcaster_->broadcastClientEvent("bob", chat::ClientEventData::ADD);
 
   chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(0), &response);
+                                              std::chrono::milliseconds(0), response);
 
   EXPECT_EQ(status, NextClientEventStatus::kOk);
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
@@ -196,13 +192,14 @@ TEST_F(ClientEventBroadcasterTest,
   connectClient("peer1", "alice");
 
   // Initialize peer's index first
-  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::ClientEventData unused;
+  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), unused);
 
   broadcaster_->broadcastClientEvent("bob", chat::ClientEventData::REMOVE);
 
   chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(0), &response);
+                                              std::chrono::milliseconds(0), response);
 
   EXPECT_EQ(status, NextClientEventStatus::kOk);
   EXPECT_EQ(response.event_type(), chat::ClientEventData::REMOVE);
@@ -218,7 +215,7 @@ TEST_F(ClientEventBroadcasterTest,
   std::thread waitingThread([this, &status, &eventReceived]() {
     chat::ClientEventData response;
     status = broadcaster_->nextClientEvent(
-        "peer1", std::chrono::milliseconds(500), &response);
+        "peer1", std::chrono::milliseconds(500), response);
     if (status == NextClientEventStatus::kOk) {
       eventReceived = true;
     }
@@ -263,8 +260,9 @@ TEST_F(ClientEventBroadcasterTest,
   EXPECT_TRUE(result);
 
   // After normalize, peer should start at current position (no old events)
+  chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(10), nullptr);
+                                              std::chrono::milliseconds(10), response);
   EXPECT_EQ(status, NextClientEventStatus::kNoEvent);
 }
 
@@ -275,7 +273,8 @@ TEST_F(ClientEventBroadcasterTest,
   connectClient("peer1", "alice");
 
   // Initialize peer's index first
-  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::ClientEventData unused;
+  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), unused);
 
   events::ClientConnectedEvent event{
       .peer = "peer2",
@@ -287,7 +286,7 @@ TEST_F(ClientEventBroadcasterTest,
 
   chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(0), &response);
+                                              std::chrono::milliseconds(0), response);
 
   EXPECT_EQ(status, NextClientEventStatus::kOk);
   EXPECT_EQ(response.event_type(), chat::ClientEventData::ADD);
@@ -299,7 +298,8 @@ TEST_F(ClientEventBroadcasterTest,
   connectClient("peer1", "alice");
 
   // Initialize peer's index first
-  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::ClientEventData unused;
+  broadcaster_->nextClientEvent("peer1", std::chrono::milliseconds(0), unused);
 
   events::ClientDisconnectedEvent event{
       .peer = "peer2",
@@ -310,7 +310,7 @@ TEST_F(ClientEventBroadcasterTest,
 
   chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(0), &response);
+                                              std::chrono::milliseconds(0), response);
 
   EXPECT_EQ(status, NextClientEventStatus::kOk);
   EXPECT_EQ(response.event_type(), chat::ClientEventData::REMOVE);
@@ -329,8 +329,9 @@ TEST_F(ClientEventBroadcasterTest, OnMessageSent_NoOp) {
   // Should not crash and should not add any events
   EXPECT_NO_THROW(broadcaster_->onMessageSent(event));
 
+  chat::ClientEventData response;
   auto status = broadcaster_->nextClientEvent("peer1",
-                                              std::chrono::milliseconds(10), nullptr);
+                                              std::chrono::milliseconds(10), response);
   EXPECT_EQ(status, NextClientEventStatus::kNoEvent);
 }
 

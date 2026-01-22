@@ -11,10 +11,13 @@ using namespace std::chrono_literals;
 ChatService::ChatService(
     std::shared_ptr<domain::ClientRegistry> clientRegistry,
     std::shared_ptr<domain::IMessageBroadcaster> messageBroadcaster,
+    std::shared_ptr<domain::IPrivateMessageBroadcaster>
+        privateMessageBroadcaster,
     std::shared_ptr<domain::IClientEventBroadcaster> clientEventBroadcaster,
     events::EventDispatcher *eventDispatcher)
     : clientRegistry_(std::move(clientRegistry)),
       messageBroadcaster_(std::move(messageBroadcaster)),
+      privateMessageBroadcaster_(std::move(privateMessageBroadcaster)),
       clientEventBroadcaster_(std::move(clientEventBroadcaster)),
       eventDispatcher_(eventDispatcher) {
   validationChain_
@@ -118,7 +121,7 @@ grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
   }
 
   std::string pseudonym;
-  if (!clientRegistry_->getPseudonymForPeer(peer, &pseudonym)) {
+  if (!clientRegistry_->getPseudonymForPeer(peer, pseudonym)) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "client not connected");
   }
@@ -143,12 +146,37 @@ grpc::Status ChatService::SendMessage(grpc::ServerContext *context,
     response->Clear();
   }
 
-  std::cout << std::format("[{}] {}", pseudonym, request->content())
-            << std::endl;
+  // Check if this is a private message
+  if (request->has_private_message_pseudonym() &&
+      !request->private_message_pseudonym().empty()) {
+    const auto &recipientPseudonym = request->private_message_pseudonym();
 
-  events::MessageSentEvent event{
-      .peer = peer, .pseudonym = pseudonym, .content = request->content()};
-  eventDispatcher_->notifyMessageSent(event);
+    std::string recipientPeer;
+    if (!clientRegistry_->getPeerForPseudonym(recipientPseudonym,
+                                              recipientPeer)) {
+      return grpc::Status(grpc::StatusCode::NOT_FOUND,
+                          "recipient not found or not connected");
+    }
+
+    std::cout << std::format("[{}] -> [{}] (private): {}", pseudonym,
+                             recipientPseudonym, request->content())
+              << std::endl;
+
+    events::PrivateMessageSentEvent event{.senderPeer = peer,
+                                          .senderPseudonym = pseudonym,
+                                          .recipientPeer = recipientPeer,
+                                          .recipientPseudonym =
+                                              recipientPseudonym,
+                                          .content = request->content()};
+    eventDispatcher_->notifyPrivateMessageSent(event);
+  } else {
+    std::cout << std::format("[{}] {}", pseudonym, request->content())
+              << std::endl;
+
+    events::MessageSentEvent event{
+        .peer = peer, .pseudonym = pseudonym, .content = request->content()};
+    eventDispatcher_->notifyMessageSent(event);
+  }
 
   return grpc::Status::OK;
 }
@@ -174,15 +202,37 @@ grpc::Status ChatService::SubscribeMessages(
                         "client not connected");
   }
 
+  privateMessageBroadcaster_->normalizePrivateMessageIndex(peer);
+
   using namespace std::chrono_literals;
   while (true) {
     if (context != nullptr && context->IsCancelled()) {
       return grpc::Status::CANCELLED;
     }
 
+    // Check for private messages first (higher priority)
+    chat::InformClientsNewMessageResponse privateMessage;
+    const domain::NextPrivateMessageStatus privateStatus =
+        privateMessageBroadcaster_->nextPrivateMessage(peer, 0ms,
+                                                       privateMessage);
+
+    if (privateStatus == domain::NextPrivateMessageStatus::kPeerMissing) {
+      return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
+                          "client not connected");
+    }
+
+    if (privateStatus == domain::NextPrivateMessageStatus::kOk) {
+      if (!writer->Write(privateMessage)) {
+        return grpc::Status(grpc::StatusCode::UNKNOWN,
+                            "failed to write private message to client stream");
+      }
+      continue;
+    }
+
+    // Check for public messages
     chat::InformClientsNewMessageResponse nextMessage;
     const domain::NextMessageStatus status =
-        messageBroadcaster_->nextMessage(peer, 200ms, &nextMessage);
+        messageBroadcaster_->nextMessage(peer, 200ms, nextMessage);
 
     if (status == domain::NextMessageStatus::kPeerMissing) {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
@@ -231,7 +281,7 @@ grpc::Status ChatService::SubscribeClientEvents(
 
     chat::ClientEventData nextEvent;
     const domain::NextClientEventStatus status =
-        clientEventBroadcaster_->nextClientEvent(peer, 200ms, &nextEvent);
+        clientEventBroadcaster_->nextClientEvent(peer, 200ms, nextEvent);
 
     if (status == domain::NextClientEventStatus::kPeerMissing) {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,

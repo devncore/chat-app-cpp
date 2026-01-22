@@ -26,6 +26,7 @@ add_executable(chat_server
     src/domain/client_registry.cpp
     src/domain/message_broadcaster.cpp
     src/domain/client_event_broadcaster.cpp
+    src/domain/private_message_broadcaster.cpp
     src/grpc/grpc_runner.cpp
     src/service/chat_service.cpp
 )

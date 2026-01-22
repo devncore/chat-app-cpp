@@ -36,7 +36,8 @@ public:
   grpc::Status disconnect(const std::string &pseudonym) override;
 
   grpc::Status sendMessage(const std::string &content,
-                           const std::optional<std::string> &privateRecipient = std::nullopt) override;
+                           const std::optional<std::string> &privateRecipient =
+                               std::nullopt) override;
 
   void startMessageStream(MessageCallback onMessage,
                           ErrorCallback onError) override;
@@ -51,7 +52,8 @@ signals:
                        const QStringList &connectedPseudonyms);
   void disconnectFinished(bool ok, const QString &errorText);
   void sendMessageFinished(bool ok, const QString &errorText);
-  void messageReceived(const QString &author, const QString &content);
+  void messageReceived(const QString &author, const QString &content,
+                       bool isPrivate);
   void messageStreamError(const QString &errorText);
   void clientEventReceived(int eventType, const QString &pseudonym);
   void clientEventStreamError(const QString &errorText);
@@ -60,8 +62,9 @@ public slots:
   void connectToServer(const QString &pseudonym, const QString &gender,
                        const QString &country);
   void disconnectFromServer(const QString &pseudonym);
-  void sendChatMessage(const QString &content,
-                       const std::optional<QString> &privateRecipient = std::nullopt);
+  void sendChatMessage(
+      const QString &content,
+      const std::optional<QString> &privateRecipient = std::nullopt);
   void startMessageStreamSlot();
   void stopMessageStreamSlot();
   void startClientEventStreamSlot();

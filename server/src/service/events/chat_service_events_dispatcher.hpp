@@ -55,6 +55,16 @@ public:
     }
   }
 
+  // Notify all observers of a private message sent
+  void notifyPrivateMessageSent(const PrivateMessageSentEvent &event) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (const auto &weakObserver : observers_) {
+      if (auto observer = weakObserver.lock()) {
+        observer->onPrivateMessageSent(event);
+      }
+    }
+  }
+
 private:
   std::mutex mutex_;
   std::vector<std::weak_ptr<IServiceEventObserver>> observers_;

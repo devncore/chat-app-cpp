@@ -12,6 +12,7 @@ public:
   std::vector<events::ClientConnectedEvent> clientConnectedEvents;
   std::vector<events::ClientDisconnectedEvent> clientDisconnectedEvents;
   std::vector<events::MessageSentEvent> messageSentEvents;
+  std::vector<events::PrivateMessageSentEvent> privateMessageSentEvents;
 
   void onClientConnected(const events::ClientConnectedEvent &event) override {
     clientConnectedEvents.push_back(event);
@@ -26,10 +27,16 @@ public:
     messageSentEvents.push_back(event);
   }
 
+  void onPrivateMessageSent(
+      const events::PrivateMessageSentEvent &event) override {
+    privateMessageSentEvents.push_back(event);
+  }
+
   void reset() {
     clientConnectedEvents.clear();
     clientDisconnectedEvents.clear();
     messageSentEvents.clear();
+    privateMessageSentEvents.clear();
   }
 
   bool hasReceivedClientConnected() const {
@@ -42,9 +49,13 @@ public:
 
   bool hasReceivedMessageSent() const { return !messageSentEvents.empty(); }
 
+  bool hasReceivedPrivateMessageSent() const {
+    return !privateMessageSentEvents.empty();
+  }
+
   size_t totalEventsReceived() const {
     return clientConnectedEvents.size() + clientDisconnectedEvents.size() +
-           messageSentEvents.size();
+           messageSentEvents.size() + privateMessageSentEvents.size();
   }
 };
 

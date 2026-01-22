@@ -26,7 +26,7 @@ public:
 
   virtual NextMessageStatus
   nextMessage(const std::string &peer, std::chrono::milliseconds waitFor,
-              chat::InformClientsNewMessageResponse *out) = 0;
+              chat::InformClientsNewMessageResponse &out) = 0;
 
   virtual bool normalizeMessageIndex(const std::string &peer) = 0;
 };
@@ -39,7 +39,7 @@ public:
   // IMessageBroadcaster
   NextMessageStatus nextMessage(const std::string &peer,
                                 std::chrono::milliseconds waitFor,
-                                chat::InformClientsNewMessageResponse *out) override;
+                                chat::InformClientsNewMessageResponse &out) override;
 
   bool normalizeMessageIndex(const std::string &peer) override;
 
@@ -47,6 +47,7 @@ public:
   void onClientConnected(const events::ClientConnectedEvent &event) override;
   void onClientDisconnected(const events::ClientDisconnectedEvent &event) override;
   void onMessageSent(const events::MessageSentEvent &event) override;
+  void onPrivateMessageSent(const events::PrivateMessageSentEvent &event) override;
 
 private:
   const ClientRegistry &clientRegistry_;

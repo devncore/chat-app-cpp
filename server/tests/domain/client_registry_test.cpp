@@ -63,20 +63,13 @@ TEST_F(ClientRegistryTest, GetPseudonymForPeer_Exists) {
   connectClient("peer1", "alice");
 
   std::string pseudonym;
-  EXPECT_TRUE(registry_.getPseudonymForPeer("peer1", &pseudonym));
+  EXPECT_TRUE(registry_.getPseudonymForPeer("peer1", pseudonym));
   EXPECT_EQ(pseudonym, "alice");
 }
 
 TEST_F(ClientRegistryTest, GetPseudonymForPeer_NotExists) {
   std::string pseudonym;
-  EXPECT_FALSE(registry_.getPseudonymForPeer("peer1", &pseudonym));
-}
-
-TEST_F(ClientRegistryTest, GetPseudonymForPeer_NullOutput) {
-  connectClient("peer1", "alice");
-
-  // Should return true even with null output pointer
-  EXPECT_TRUE(registry_.getPseudonymForPeer("peer1", nullptr));
+  EXPECT_FALSE(registry_.getPseudonymForPeer("peer1", pseudonym));
 }
 
 TEST_F(ClientRegistryTest, IsPeerConnected_Connected) {
@@ -144,7 +137,7 @@ TEST_F(ClientRegistryTest, OnClientConnected_OverwritesExistingPeer) {
   connectClient("peer1", "bob");
 
   std::string pseudonym;
-  EXPECT_TRUE(registry_.getPseudonymForPeer("peer1", &pseudonym));
+  EXPECT_TRUE(registry_.getPseudonymForPeer("peer1", pseudonym));
   EXPECT_EQ(pseudonym, "bob");
 
   auto pseudonyms = registry_.getConnectedPseudonyms();

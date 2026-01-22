@@ -25,6 +25,14 @@ struct MessageSentEvent {
   std::string content;
 };
 
+struct PrivateMessageSentEvent {
+  std::string senderPeer;
+  std::string senderPseudonym;
+  std::string recipientPeer;
+  std::string recipientPseudonym;
+  std::string content;
+};
+
 // Simple virtual interface for event observers
 class IServiceEventObserver {
 public:
@@ -33,6 +41,7 @@ public:
   virtual void onClientConnected(const ClientConnectedEvent &event) = 0;
   virtual void onClientDisconnected(const ClientDisconnectedEvent &event) = 0;
   virtual void onMessageSent(const MessageSentEvent &event) = 0;
+  virtual void onPrivateMessageSent(const PrivateMessageSentEvent &event) = 0;
 };
 
 } // namespace events

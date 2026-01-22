@@ -29,7 +29,7 @@ public:
 
   virtual NextClientEventStatus
   nextClientEvent(const std::string &peer, std::chrono::milliseconds waitFor,
-                  chat::ClientEventData *out) = 0;
+                  chat::ClientEventData &out) = 0;
 
   virtual bool normalizeClientEventIndex(const std::string &peer) = 0;
 };
@@ -45,7 +45,7 @@ public:
 
   NextClientEventStatus
   nextClientEvent(const std::string &peer, std::chrono::milliseconds waitFor,
-                  chat::ClientEventData *out) override;
+                  chat::ClientEventData &out) override;
 
   bool normalizeClientEventIndex(const std::string &peer) override;
 
@@ -53,6 +53,7 @@ public:
   void onClientConnected(const events::ClientConnectedEvent &event) override;
   void onClientDisconnected(const events::ClientDisconnectedEvent &event) override;
   void onMessageSent(const events::MessageSentEvent &event) override;
+  void onPrivateMessageSent(const events::PrivateMessageSentEvent &event) override;
 
 private:
   const ClientRegistry &clientRegistry_;

@@ -11,6 +11,7 @@
 #include "domain/client_event_broadcaster.hpp"
 #include "domain/client_registry.hpp"
 #include "domain/message_broadcaster.hpp"
+#include "domain/private_message_broadcaster.hpp"
 #include "service/chat_service.hpp"
 #include "service/events/chat_service_events_dispatcher.hpp"
 
@@ -34,6 +35,7 @@ private:
   // Domain components
   std::shared_ptr<domain::MessageBroadcaster> messageBroadcaster_;
   std::shared_ptr<domain::ClientEventBroadcaster> clientEventBroadcaster_;
+  std::shared_ptr<domain::PrivateMessageBroadcaster> privateMessageBroadcaster_;
 
   // Observers
   std::shared_ptr<observers::DatabaseEventLogger> dbLogger_;

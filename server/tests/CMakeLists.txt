@@ -7,6 +7,7 @@ add_executable(chat_server_tests
     domain/client_registry_test.cpp
     domain/message_broadcaster_test.cpp
     domain/client_event_broadcaster_test.cpp
+    domain/private_message_broadcaster_test.cpp
 
     # Events tests
     events/event_dispatcher_test.cpp
@@ -18,6 +19,7 @@ add_executable(chat_server_tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/domain/client_registry.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/domain/message_broadcaster.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/domain/client_event_broadcaster.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/domain/private_message_broadcaster.cpp
 )
 
 target_include_directories(chat_server_tests

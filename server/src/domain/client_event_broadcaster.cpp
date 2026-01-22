@@ -29,7 +29,7 @@ void ClientEventBroadcaster::broadcastClientEvent(
 
 NextClientEventStatus ClientEventBroadcaster::nextClientEvent(
     const std::string &peer, std::chrono::milliseconds waitFor,
-    chat::ClientEventData *out) {
+    chat::ClientEventData &out) {
   std::unique_lock<std::mutex> lock(mutex_);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
@@ -43,9 +43,7 @@ NextClientEventStatus ClientEventBroadcaster::nextClientEvent(
   }
 
   if (it->second < clientEvents_.size()) {
-    if (out != nullptr) {
-      *out = clientEvents_[it->second];
-    }
+    out = clientEvents_[it->second];
     ++it->second;
     return NextClientEventStatus::kOk;
   }
@@ -63,9 +61,7 @@ NextClientEventStatus ClientEventBroadcaster::nextClientEvent(
   }
 
   if (it->second < clientEvents_.size()) {
-    if (out != nullptr) {
-      *out = clientEvents_[it->second];
-    }
+    out = clientEvents_[it->second];
     ++it->second;
     return NextClientEventStatus::kOk;
   }
@@ -104,8 +100,10 @@ void ClientEventBroadcaster::onClientDisconnected(
   broadcastClientEvent(event.pseudonym, chat::ClientEventData::REMOVE);
 }
 
-void ClientEventBroadcaster::onMessageSent(const events::MessageSentEvent &event) {
-  (void)event;
-}
+void ClientEventBroadcaster::onMessageSent(
+    [[maybe_unused]] const events::MessageSentEvent &event) {}
+
+void ClientEventBroadcaster::onPrivateMessageSent(
+    [[maybe_unused]] const events::PrivateMessageSentEvent &event) {}
 
 } // namespace domain

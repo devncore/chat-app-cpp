@@ -18,7 +18,7 @@ bool ClientRegistry::isPseudonymAvailable(const std::string &peer,
 }
 
 bool ClientRegistry::getPseudonymForPeer(const std::string &peer,
-                                         std::string *out) const {
+                                         std::string &out) const {
   std::lock_guard<std::mutex> lock(mutex_);
 
   auto it = clients_.find(peer);
@@ -26,9 +26,24 @@ bool ClientRegistry::getPseudonymForPeer(const std::string &peer,
     return false;
   }
 
-  if (out != nullptr) {
-    *out = it->second.pseudonym;
+  out = it->second.pseudonym;
+  return true;
+}
+
+bool ClientRegistry::getPeerForPseudonym(const std::string &pseudonym,
+                                         std::string &out) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  auto it = std::find_if(clients_.cbegin(), clients_.cend(),
+                         [&pseudonym](const auto &entry) {
+                           return entry.second.pseudonym == pseudonym;
+                         });
+
+  if (it == clients_.end()) {
+    return false;
   }
+
+  out = it->first;
   return true;
 }
 
@@ -92,8 +107,10 @@ void ClientRegistry::onClientDisconnected(
   }
 }
 
-void ClientRegistry::onMessageSent(const events::MessageSentEvent &event) {
-  (void)event;
-}
+void ClientRegistry::onMessageSent(
+    [[maybe_unused]] const events::MessageSentEvent &event) {}
+
+void ClientRegistry::onPrivateMessageSent(
+    [[maybe_unused]] const events::PrivateMessageSentEvent &event) {}
 
 } // namespace domain

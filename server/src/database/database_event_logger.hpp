@@ -53,6 +53,14 @@ public:
     }
   }
 
+  void onPrivateMessageSent(const events::PrivateMessageSentEvent &event) override {
+    DB_LOG_GET_OR_RETURN(db);
+
+    if (auto error = db->incrementTxMessage(event.senderPseudonym)) {
+      std::cerr << "Database error on private message sent: " << *error << std::endl;
+    }
+  }
+
 private:
   std::shared_ptr<database::IDatabaseManager> getDatabase() {
     return db_.lock();

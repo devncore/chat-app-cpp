@@ -10,6 +10,8 @@ GrpcRunner::GrpcRunner(std::shared_ptr<database::IDatabaseManager> db,
           std::make_shared<domain::MessageBroadcaster>(*clientRegistry_)),
       clientEventBroadcaster_(
           std::make_shared<domain::ClientEventBroadcaster>(*clientRegistry_)),
+      privateMessageBroadcaster_(
+          std::make_shared<domain::PrivateMessageBroadcaster>(*clientRegistry_)),
       dbLogger_(std::make_shared<observers::DatabaseEventLogger>(db)) {
   // Register observers with the event dispatcher
   // ClientRegistry must be registered first to update state before other
@@ -22,11 +24,14 @@ GrpcRunner::GrpcRunner(std::shared_ptr<database::IDatabaseManager> db,
   eventDispatcher_.registerObserver(
       std::static_pointer_cast<events::IServiceEventObserver>(
           clientEventBroadcaster_));
+  eventDispatcher_.registerObserver(
+      std::static_pointer_cast<events::IServiceEventObserver>(
+          privateMessageBroadcaster_));
 
   // Create ChatService with dependencies
-  service_ =
-      std::make_unique<ChatService>(clientRegistry_, messageBroadcaster_,
-                                    clientEventBroadcaster_, &eventDispatcher_);
+  service_ = std::make_unique<ChatService>(
+      clientRegistry_, messageBroadcaster_, privateMessageBroadcaster_,
+      clientEventBroadcaster_, &eventDispatcher_);
 
   const std::string serverAddressString(serverAddress);
   grpc::ServerBuilder builder;

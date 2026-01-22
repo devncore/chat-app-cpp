@@ -44,11 +44,12 @@ void ChatServiceGrpc::disconnectFromServer(const QString &pseudonym) {
   emit disconnectFinished(ok, errorText);
 }
 
-void ChatServiceGrpc::sendChatMessage(const QString &content,
-                                      const std::optional<QString> &privateRecipient) {
-  const auto recipient = privateRecipient.has_value()
-                             ? std::optional<std::string>{privateRecipient->toStdString()}
-                             : std::nullopt;
+void ChatServiceGrpc::sendChatMessage(
+    const QString &content, const std::optional<QString> &privateRecipient) {
+  const auto recipient =
+      privateRecipient.has_value()
+          ? std::optional<std::string>{privateRecipient->toStdString()}
+          : std::nullopt;
   const auto status = sendMessage(content.toStdString(), recipient);
   const bool ok = status.ok();
   const QString errorText =
@@ -61,7 +62,8 @@ void ChatServiceGrpc::startMessageStreamSlot() {
   startMessageStream(
       [this](const chat::InformClientsNewMessageResponse &incoming) {
         emit messageReceived(QString::fromStdString(incoming.author()),
-                             QString::fromStdString(incoming.content()));
+                             QString::fromStdString(incoming.content()),
+                             incoming.isprivate());
       },
       [this](const std::string &errorText) {
         if (errorText.empty()) {
@@ -124,8 +126,9 @@ grpc::Status ChatServiceGrpc::disconnect(const std::string &pseudonym) {
   return status;
 }
 
-grpc::Status ChatServiceGrpc::sendMessage(const std::string &content,
-                                          const std::optional<std::string> &privateRecipient) {
+grpc::Status ChatServiceGrpc::sendMessage(
+    const std::string &content,
+    const std::optional<std::string> &privateRecipient) {
   ensureStub();
   chat::SendMessageRequest request;
   request.set_content(content);

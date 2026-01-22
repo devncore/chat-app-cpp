@@ -53,16 +53,18 @@ protected:
 // --- nextMessage Tests ---
 
 TEST_F(MessageBroadcasterTest, NextMessage_PeerNotConnected_ReturnsPeerMissing) {
+  chat::InformClientsNewMessageResponse response;
   auto status = broadcaster_->nextMessage("unknown_peer",
-                                          std::chrono::milliseconds(0), nullptr);
+                                          std::chrono::milliseconds(0), response);
   EXPECT_EQ(status, NextMessageStatus::kPeerMissing);
 }
 
 TEST_F(MessageBroadcasterTest, NextMessage_NoMessages_ReturnsNoMessage) {
   connectClient("peer1", "alice");
 
+  chat::InformClientsNewMessageResponse response;
   auto status =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(10), nullptr);
+      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(10), response);
   EXPECT_EQ(status, NextMessageStatus::kNoMessage);
 }
 
@@ -70,14 +72,15 @@ TEST_F(MessageBroadcasterTest, NextMessage_HasMessage_ReturnsOk) {
   connectClient("peer1", "alice");
 
   // Initialize peer's index first by calling nextMessage (will return NoMessage)
-  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::InformClientsNewMessageResponse unused;
+  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), unused);
 
   // Now send message - peer will see it
   sendMessage("peer1", "alice", "Hello!");
 
   chat::InformClientsNewMessageResponse response;
   auto status =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), &response);
+      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), response);
 
   EXPECT_EQ(status, NextMessageStatus::kOk);
   EXPECT_EQ(response.author(), "alice");
@@ -88,7 +91,8 @@ TEST_F(MessageBroadcasterTest, NextMessage_MultipleMessages_ReturnsInOrder) {
   connectClient("peer1", "alice");
 
   // Initialize peer's index first
-  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::InformClientsNewMessageResponse unused;
+  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), unused);
 
   sendMessage("peer1", "alice", "First");
   sendMessage("peer1", "alice", "Second");
@@ -97,32 +101,19 @@ TEST_F(MessageBroadcasterTest, NextMessage_MultipleMessages_ReturnsInOrder) {
   chat::InformClientsNewMessageResponse response;
 
   auto status1 =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), &response);
+      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), response);
   EXPECT_EQ(status1, NextMessageStatus::kOk);
   EXPECT_EQ(response.content(), "First");
 
   auto status2 =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), &response);
+      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), response);
   EXPECT_EQ(status2, NextMessageStatus::kOk);
   EXPECT_EQ(response.content(), "Second");
 
   auto status3 =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), &response);
+      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), response);
   EXPECT_EQ(status3, NextMessageStatus::kOk);
   EXPECT_EQ(response.content(), "Third");
-}
-
-TEST_F(MessageBroadcasterTest, NextMessage_NullOutput_StillReturnsOk) {
-  connectClient("peer1", "alice");
-
-  // Initialize peer's index first
-  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), nullptr);
-
-  sendMessage("peer1", "alice", "Hello!");
-
-  auto status =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), nullptr);
-  EXPECT_EQ(status, NextMessageStatus::kOk);
 }
 
 TEST_F(MessageBroadcasterTest, NextMessage_MultiplePeers_IndependentIndices) {
@@ -130,23 +121,25 @@ TEST_F(MessageBroadcasterTest, NextMessage_MultiplePeers_IndependentIndices) {
   connectClient("peer2", "bob");
 
   // Initialize both peers' indices first
-  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), nullptr);
-  broadcaster_->nextMessage("peer2", std::chrono::milliseconds(0), nullptr);
+  chat::InformClientsNewMessageResponse unused;
+  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), unused);
+  broadcaster_->nextMessage("peer2", std::chrono::milliseconds(0), unused);
 
   sendMessage("peer1", "alice", "Message1");
   sendMessage("peer2", "bob", "Message2");
 
-  chat::InformClientsNewMessageResponse response1, response2;
+  chat::InformClientsNewMessageResponse response1;
+  chat::InformClientsNewMessageResponse response2;
 
   // peer1 should see Message1 first
   auto status1 =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), &response1);
+      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), response1);
   EXPECT_EQ(status1, NextMessageStatus::kOk);
   EXPECT_EQ(response1.content(), "Message1");
 
   // peer2 should also see Message1 first (independent index)
   auto status2 =
-      broadcaster_->nextMessage("peer2", std::chrono::milliseconds(0), &response2);
+      broadcaster_->nextMessage("peer2", std::chrono::milliseconds(0), response2);
   EXPECT_EQ(status2, NextMessageStatus::kOk);
   EXPECT_EQ(response2.content(), "Message1");
 }
@@ -160,8 +153,9 @@ TEST_F(MessageBroadcasterTest,
     disconnectClient("alice");
   });
 
+  chat::InformClientsNewMessageResponse response;
   auto status = broadcaster_->nextMessage("peer1", std::chrono::milliseconds(100),
-                                          nullptr);
+                                          response);
   disconnectThread.join();
 
   // After timeout, peer is disconnected
@@ -177,8 +171,9 @@ TEST_F(MessageBroadcasterTest,
   connectClient("peer2", "bob");
 
   // peer2 should NOT see the old message (starts at current position)
+  chat::InformClientsNewMessageResponse response;
   auto status =
-      broadcaster_->nextMessage("peer2", std::chrono::milliseconds(10), nullptr);
+      broadcaster_->nextMessage("peer2", std::chrono::milliseconds(10), response);
   EXPECT_EQ(status, NextMessageStatus::kNoMessage);
 }
 
@@ -209,8 +204,9 @@ TEST_F(MessageBroadcasterTest,
   EXPECT_TRUE(result);
 
   // After normalize, peer should start at current position (no old messages)
+  chat::InformClientsNewMessageResponse response;
   auto status =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(10), nullptr);
+      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(10), response);
   EXPECT_EQ(status, NextMessageStatus::kNoMessage);
 }
 
@@ -220,7 +216,8 @@ TEST_F(MessageBroadcasterTest, OnMessageSent_AddsMessageToHistory) {
   connectClient("peer1", "alice");
 
   // Initialize peer's index first
-  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), nullptr);
+  chat::InformClientsNewMessageResponse unused;
+  broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), unused);
 
   events::MessageSentEvent event{
       .peer = "peer1",
@@ -231,7 +228,7 @@ TEST_F(MessageBroadcasterTest, OnMessageSent_AddsMessageToHistory) {
 
   chat::InformClientsNewMessageResponse response;
   auto status =
-      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), &response);
+      broadcaster_->nextMessage("peer1", std::chrono::milliseconds(0), response);
 
   EXPECT_EQ(status, NextMessageStatus::kOk);
   EXPECT_EQ(response.author(), "alice");
@@ -247,7 +244,7 @@ TEST_F(MessageBroadcasterTest, OnMessageSent_WakesWaitingPeers) {
   std::thread waitingThread([this, &status, &messageReceived]() {
     chat::InformClientsNewMessageResponse response;
     status = broadcaster_->nextMessage("peer1", std::chrono::milliseconds(500),
-                                       &response);
+                                       response);
     if (status == NextMessageStatus::kOk) {
       messageReceived = true;
     }

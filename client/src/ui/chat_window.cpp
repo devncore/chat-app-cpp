@@ -171,6 +171,36 @@ void ChatWindow::addMessage(const QString &author, const QString &message,
   conversation_->append(formatted);
 }
 
+void ChatWindow::addPrivateMessage(const QString &author,
+                                   const QString &message) {
+  const auto key = author.toLower();
+
+  // manage private window in case of new private message in.
+  PrivateChatWindow *window = nullptr;
+  if (privateChats_.contains(key) && !privateChats_.value(key).isNull()) {
+    window = privateChats_.value(key);
+    if (!window->isVisible()) {
+      window->show();
+    }
+  } else {
+    const auto myPseudonym = pseudonymInput_->text().trimmed();
+    window = new PrivateChatWindow(myPseudonym, author, this);
+
+    connect(window, &QObject::destroyed, this,
+            [this, key]() { privateChats_.remove(key); });
+
+    connect(window, &PrivateChatWindow::sendPrivateMessageRequested, this,
+            &ChatWindow::onPrivateMessageRequested);
+
+    privateChats_.insert(key, window);
+    window->show();
+  }
+
+  window->addMessage(author, message);
+  window->raise();
+  window->activateWindow();
+}
+
 void ChatWindow::handleSend() {
   if (!connected_) {
     QMessageBox::information(this, "Not connected",
@@ -248,8 +278,12 @@ void ChatWindow::onSendMessageFinished(bool ok, const QString &errorText) {
 }
 
 void ChatWindow::onMessageReceived(const QString &author,
-                                   const QString &content) {
-  addMessage(author, content);
+                                   const QString &content, bool isPrivate) {
+  if (isPrivate) {
+    addPrivateMessage(author, content);
+  } else {
+    addMessage(author, content);
+  }
 }
 
 void ChatWindow::onMessageStreamError(const QString &errorText) {
@@ -413,19 +447,18 @@ void ChatWindow::showClientsContextMenu(const QPoint &pos) {
 void ChatWindow::openPrivateChatWith(const QString &pseudonym) {
   const auto key = pseudonym.toLower();
 
-  if (privateChats_.contains(key)) {
-    auto *window = privateChats_.value(key);
+  if (privateChats_.contains(key) && !privateChats_.value(key).isNull()) {
+    PrivateChatWindow *window = privateChats_.value(key);
     window->raise();
     window->activateWindow();
     return;
   }
 
   const auto myPseudonym = pseudonymInput_->text().trimmed();
-  auto *window = new PrivateChatWindow(myPseudonym, pseudonym);
+  auto *window = new PrivateChatWindow(myPseudonym, pseudonym, this);
 
-  connect(window, &QObject::destroyed, this, [this, key]() {
-    privateChats_.remove(key);
-  });
+  connect(window, &QObject::destroyed, this,
+          [this, key]() { privateChats_.remove(key); });
 
   connect(window, &PrivateChatWindow::sendPrivateMessageRequested, this,
           &ChatWindow::onPrivateMessageRequested);

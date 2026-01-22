@@ -23,7 +23,9 @@ public:
   bool isPseudonymAvailable(const std::string &peer,
                             const std::string &pseudonym) const;
 
-  bool getPseudonymForPeer(const std::string &peer, std::string *out) const;
+  bool getPseudonymForPeer(const std::string &peer, std::string &out) const;
+
+  bool getPeerForPseudonym(const std::string &pseudonym, std::string &out) const;
 
   std::optional<std::chrono::steady_clock::duration>
   getConnectionDuration(const std::string &peer) const;
@@ -40,6 +42,7 @@ private:
   void
   onClientDisconnected(const events::ClientDisconnectedEvent &event) override;
   void onMessageSent(const events::MessageSentEvent &event) override;
+  void onPrivateMessageSent(const events::PrivateMessageSentEvent &event) override;
 
   mutable std::mutex mutex_;
   std::unordered_map<std::string, ClientInfo> clients_;

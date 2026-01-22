@@ -8,7 +8,7 @@ MessageBroadcaster::MessageBroadcaster(const ClientRegistry &clientRegistry)
 NextMessageStatus
 MessageBroadcaster::nextMessage(const std::string &peer,
                                 std::chrono::milliseconds waitFor,
-                                chat::InformClientsNewMessageResponse *out) {
+                                chat::InformClientsNewMessageResponse &out) {
   std::unique_lock<std::mutex> lock(mutex_);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
@@ -22,9 +22,7 @@ MessageBroadcaster::nextMessage(const std::string &peer,
   }
 
   if (it->second < messageHistory_.size()) {
-    if (out != nullptr) {
-      *out = messageHistory_[it->second];
-    }
+    out = messageHistory_[it->second];
     ++it->second;
     return NextMessageStatus::kOk;
   }
@@ -42,9 +40,7 @@ MessageBroadcaster::nextMessage(const std::string &peer,
   }
 
   if (it->second < messageHistory_.size()) {
-    if (out != nullptr) {
-      *out = messageHistory_[it->second];
-    }
+    out = messageHistory_[it->second];
     ++it->second;
     return NextMessageStatus::kOk;
   }
@@ -74,14 +70,10 @@ bool MessageBroadcaster::normalizeMessageIndex(const std::string &peer) {
 }
 
 void MessageBroadcaster::onClientConnected(
-    const events::ClientConnectedEvent &event) {
-  (void)event;
-}
+    [[maybe_unused]] const events::ClientConnectedEvent &event) {}
 
 void MessageBroadcaster::onClientDisconnected(
-    const events::ClientDisconnectedEvent &event) {
-  (void)event;
-}
+    [[maybe_unused]] const events::ClientDisconnectedEvent &event) {}
 
 void MessageBroadcaster::onMessageSent(const events::MessageSentEvent &event) {
   chat::InformClientsNewMessageResponse payload;
@@ -95,5 +87,8 @@ void MessageBroadcaster::onMessageSent(const events::MessageSentEvent &event) {
 
   messageCv_.notify_all();
 }
+
+void MessageBroadcaster::onPrivateMessageSent(
+    [[maybe_unused]] const events::PrivateMessageSentEvent &event) {}
 
 } // namespace domain

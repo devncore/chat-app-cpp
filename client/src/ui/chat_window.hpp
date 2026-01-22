@@ -3,6 +3,7 @@
 #include <optional>
 
 #include <QHash>
+#include <QPointer>
 #include <QString>
 #include <QStringList>
 #include <QWidget>
@@ -33,8 +34,9 @@ signals:
   void connectRequested(const QString &pseudonym, const QString &gender,
                         const QString &country);
   void disconnectRequested(const QString &pseudonym);
-  void sendMessageRequested(const QString &content,
-                            const std::optional<QString> &privateRecipient = std::nullopt);
+  void sendMessageRequested(
+      const QString &content,
+      const std::optional<QString> &privateRecipient = std::nullopt);
   void startMessageStreamRequested();
   void stopMessageStreamRequested();
   void startClientEventStreamRequested();
@@ -46,7 +48,8 @@ public slots:
                          const QStringList &connectedPseudonyms);
   void onDisconnectFinished(bool ok, const QString &errorText);
   void onSendMessageFinished(bool ok, const QString &errorText);
-  void onMessageReceived(const QString &author, const QString &content);
+  void onMessageReceived(const QString &author, const QString &content,
+                         bool isPrivate);
   void onMessageStreamError(const QString &errorText);
   void onClientEventReceived(int eventType, const QString &pseudonym);
   void onClientEventStreamError(const QString &errorText);
@@ -60,6 +63,7 @@ private:
   QWidget *createChatView();
   void addMessage(const QString &author, const QString &message,
                   QString color = "black");
+  void addPrivateMessage(const QString &author, const QString &message);
   void handleSend();
   void handleConnect();
   void switchToChatView(const QString &welcomeMessage,
@@ -73,7 +77,8 @@ private:
   void stopClientEventStream();
   void showClientsContextMenu(const QPoint &pos);
   void openPrivateChatWith(const QString &pseudonym);
-  void onPrivateMessageRequested(const QString &recipient, const QString &content);
+  void onPrivateMessageRequested(const QString &recipient,
+                                 const QString &content);
 
   QStackedWidget *stacked_;
   QWidget *loginView_;
@@ -89,5 +94,5 @@ private:
   bool connected_{false};
   QString serverAddress_;
   QMenu *clientsContextMenu_{nullptr};
-  QHash<QString, PrivateChatWindow *> privateChats_;
+  QHash<QString, QPointer<PrivateChatWindow>> privateChats_;
 };
