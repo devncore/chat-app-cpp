@@ -44,8 +44,12 @@ void ChatServiceGrpc::disconnectFromServer(const QString &pseudonym) {
   emit disconnectFinished(ok, errorText);
 }
 
-void ChatServiceGrpc::sendChatMessage(const QString &content) {
-  const auto status = sendMessage(content.toStdString());
+void ChatServiceGrpc::sendChatMessage(const QString &content,
+                                      const std::optional<QString> &privateRecipient) {
+  const auto recipient = privateRecipient.has_value()
+                             ? std::optional<std::string>{privateRecipient->toStdString()}
+                             : std::nullopt;
+  const auto status = sendMessage(content.toStdString(), recipient);
   const bool ok = status.ok();
   const QString errorText =
       ok ? QString{} : QString::fromStdString(status.error_message());
@@ -120,10 +124,14 @@ grpc::Status ChatServiceGrpc::disconnect(const std::string &pseudonym) {
   return status;
 }
 
-grpc::Status ChatServiceGrpc::sendMessage(const std::string &content) {
+grpc::Status ChatServiceGrpc::sendMessage(const std::string &content,
+                                          const std::optional<std::string> &privateRecipient) {
   ensureStub();
   chat::SendMessageRequest request;
   request.set_content(content);
+  if (privateRecipient.has_value()) {
+    request.set_private_message_pseudonym(*privateRecipient);
+  }
 
   grpc::ClientContext context;
   google::protobuf::Empty response;

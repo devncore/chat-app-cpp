@@ -45,7 +45,7 @@ message DisconnectRequest {
 
 message SendMessageRequest {
   string content = 1;
-  reserved 2;
+  optional string private_message_pseudonym = 3;
 }
 
 message InformClientsNewMessageRequest {

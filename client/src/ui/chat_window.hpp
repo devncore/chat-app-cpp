@@ -1,5 +1,8 @@
 #pragma once
 
+#include <optional>
+
+#include <QHash>
 #include <QString>
 #include <QStringList>
 #include <QWidget>
@@ -8,10 +11,13 @@ class QFormLayout;
 class QLineEdit;
 class QComboBox;
 class QListWidget;
+class QListWidgetItem;
+class QMenu;
 class QPushButton;
 class QStackedWidget;
 class QTextBrowser;
 class QCloseEvent;
+class PrivateChatWindow;
 
 class ChatWindow : public QWidget {
   Q_OBJECT
@@ -27,7 +33,8 @@ signals:
   void connectRequested(const QString &pseudonym, const QString &gender,
                         const QString &country);
   void disconnectRequested(const QString &pseudonym);
-  void sendMessageRequested(const QString &content);
+  void sendMessageRequested(const QString &content,
+                            const std::optional<QString> &privateRecipient = std::nullopt);
   void startMessageStreamRequested();
   void stopMessageStreamRequested();
   void startClientEventStreamRequested();
@@ -64,6 +71,9 @@ private:
   void stopMessageStream();
   void startClientEventStream();
   void stopClientEventStream();
+  void showClientsContextMenu(const QPoint &pos);
+  void openPrivateChatWith(const QString &pseudonym);
+  void onPrivateMessageRequested(const QString &recipient, const QString &content);
 
   QStackedWidget *stacked_;
   QWidget *loginView_;
@@ -78,4 +88,6 @@ private:
   QPushButton *sendButton_;
   bool connected_{false};
   QString serverAddress_;
+  QMenu *clientsContextMenu_{nullptr};
+  QHash<QString, PrivateChatWindow *> privateChats_;
 };

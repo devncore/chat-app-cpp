@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <string>
 
 #include <grpcpp/grpcpp.h>
@@ -52,9 +53,11 @@ public:
   /**
    * @brief Send a chat message to the server.
    * @param content The message content.
+   * @param privateRecipient Optional pseudonym for private message recipient.
    * @return Status returned by the server.
    */
-  virtual grpc::Status sendMessage(const std::string &content) = 0;
+  virtual grpc::Status sendMessage(const std::string &content,
+                                   const std::optional<std::string> &privateRecipient = std::nullopt) = 0;
 
   /**
    * @brief Start streaming new messages to the client.

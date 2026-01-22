@@ -3,6 +3,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <qobject.h>
 #include <string>
 #include <thread>
@@ -34,7 +35,8 @@ public:
 
   grpc::Status disconnect(const std::string &pseudonym) override;
 
-  grpc::Status sendMessage(const std::string &content) override;
+  grpc::Status sendMessage(const std::string &content,
+                           const std::optional<std::string> &privateRecipient = std::nullopt) override;
 
   void startMessageStream(MessageCallback onMessage,
                           ErrorCallback onError) override;
@@ -58,7 +60,8 @@ public slots:
   void connectToServer(const QString &pseudonym, const QString &gender,
                        const QString &country);
   void disconnectFromServer(const QString &pseudonym);
-  void sendChatMessage(const QString &content);
+  void sendChatMessage(const QString &content,
+                       const std::optional<QString> &privateRecipient = std::nullopt);
   void startMessageStreamSlot();
   void stopMessageStreamSlot();
   void startClientEventStreamSlot();

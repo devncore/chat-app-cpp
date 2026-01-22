@@ -1,6 +1,9 @@
 #include "ui/chat_window.hpp"
 
+#include <optional>
+
 #include <QAbstractItemView>
+#include <QAction>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDateTime>
@@ -10,6 +13,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QStackedWidget>
@@ -21,6 +25,7 @@
 #include <utility>
 
 #include "chat.grpc.pb.h"
+#include "ui/private_chat_window.hpp"
 ChatWindow::ChatWindow(QString serverAddress, QWidget *parent)
     : QWidget(parent), stacked_(new QStackedWidget(this)),
       serverAddress_(std::move(serverAddress)) {
@@ -139,15 +144,20 @@ QWidget *ChatWindow::createChatView() {
 
   connect(sendButton_, &QPushButton::clicked, this, [this]() { handleSend(); });
   connect(input_, &QLineEdit::returnPressed, this, [this]() { handleSend(); });
-  connect(clientsList_, &QListWidget::itemClicked, this,
-          [this](QListWidgetItem *item) {
-            if (!item) {
-              return;
-            }
-            addMessage("System",
-                       QStringLiteral("Selected %1 (private chat TBD).")
-                           .arg(item->text()));
-          });
+
+  clientsList_->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(clientsList_, &QListWidget::customContextMenuRequested, this,
+          &ChatWindow::showClientsContextMenu);
+
+  clientsContextMenu_ = new QMenu(this);
+  auto *privateMessageAction =
+      clientsContextMenu_->addAction("Send private message");
+  connect(privateMessageAction, &QAction::triggered, this, [this]() {
+    auto *item = clientsList_->currentItem();
+    if (item) {
+      openPrivateChatWith(item->text());
+    }
+  });
 
   return widget;
 }
@@ -267,7 +277,7 @@ void ChatWindow::switchToChatView(const QString &welcomeMessage,
                                   const QStringList &connectedPseudonyms) {
   stacked_->setCurrentWidget(chatView_);
   conversation_->clear();
-  if (clientsList_) {
+  if (clientsList_ != nullptr) {
     clientsList_->clear();
 
     // Add self first
@@ -353,8 +363,7 @@ void ChatWindow::handleClientEvent(int eventType, const QString &pseudonym) {
   switch (eventType) {
   case chat::ClientEventData::ADD: {
     if (addClientToList(pseudonym)) {
-      addMessage("System",
-                 QStringLiteral("%1 joined the chat.").arg(pseudonym),
+      addMessage("System", QStringLiteral("%1 joined the chat.").arg(pseudonym),
                  MESSAGE_COLOR_USER_CONNECT_);
     }
     break;
@@ -382,4 +391,50 @@ void ChatWindow::startClientEventStream() {
 
 void ChatWindow::stopClientEventStream() {
   emit stopClientEventStreamRequested();
+}
+
+void ChatWindow::showClientsContextMenu(const QPoint &pos) {
+  auto *item = clientsList_->itemAt(pos);
+  if (!item) {
+    return;
+  }
+
+  const auto pseudonym = item->text();
+  const auto myPseudonym = pseudonymInput_->text().trimmed();
+
+  if (QString::compare(pseudonym, myPseudonym, Qt::CaseInsensitive) == 0) {
+    return;
+  }
+
+  clientsList_->setCurrentItem(item);
+  clientsContextMenu_->popup(clientsList_->mapToGlobal(pos));
+}
+
+void ChatWindow::openPrivateChatWith(const QString &pseudonym) {
+  const auto key = pseudonym.toLower();
+
+  if (privateChats_.contains(key)) {
+    auto *window = privateChats_.value(key);
+    window->raise();
+    window->activateWindow();
+    return;
+  }
+
+  const auto myPseudonym = pseudonymInput_->text().trimmed();
+  auto *window = new PrivateChatWindow(myPseudonym, pseudonym);
+
+  connect(window, &QObject::destroyed, this, [this, key]() {
+    privateChats_.remove(key);
+  });
+
+  connect(window, &PrivateChatWindow::sendPrivateMessageRequested, this,
+          &ChatWindow::onPrivateMessageRequested);
+
+  privateChats_.insert(key, window);
+  window->show();
+}
+
+void ChatWindow::onPrivateMessageRequested(const QString &recipient,
+                                           const QString &content) {
+  emit sendMessageRequested(content, std::make_optional(recipient));
 }
