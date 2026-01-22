@@ -36,6 +36,7 @@ demonstrate and promote my C++ skills.
   limiting.
 - **Database event logging**: Persistent logging of connections, disconnections,
   and message statistics to SQLite.
+- **Private messaging**: Direct message routing between individual clients.
 
 ### Client Features
 - **Dual-stream architecture**: Separate gRPC streams for messages and client
@@ -45,6 +46,7 @@ demonstrate and promote my C++ skills.
 - **Lazy stub initialization**: gRPC channel and stub created on demand.
 - **Thread-safe stream management**: Atomic flags and proper cancellation for
   clean shutdown.
+- **Private messaging**: Send and receive direct messages to/from specific users.
 
 ### Design Patterns
 
@@ -135,7 +137,7 @@ cmake --build server/build
 - Doxygen docs can be generated via the VS Code task `generate_doxygen`.
 
 ## Known Limitations
-- Single global chat room; no channels or private chats.
+- Single global chat room; no channels.
 - No authentication or encryption; gRPC uses insecure credentials by default.
 - Client/server lifecycle assumes a stable network and does not persist chat
   history across restarts.
