@@ -5,10 +5,8 @@
 #include <QAbstractItemView>
 #include <QAction>
 #include <QCloseEvent>
-#include <QComboBox>
 #include <QDateTime>
 #include <QDebug>
-#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QListWidget>
@@ -16,7 +14,6 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QStackedWidget>
 #include <QString>
 #include <QStringList>
 #include <QTextBrowser>
@@ -26,22 +23,20 @@
 
 #include "chat.grpc.pb.h"
 #include "ui/private_chat_window.hpp"
-ChatWindow::ChatWindow(QString serverAddress, QWidget *parent)
-    : QWidget(parent), stacked_(new QStackedWidget(this)),
-      serverAddress_(std::move(serverAddress)) {
+#include "ui/stacked_widget_handler.hpp"
+ChatWindow::ChatWindow(QWidget *parent) : QWidget(parent) {
   setWindowTitle("Chat Client");
   resize(480, 480);
-
-  loginView_ = createLoginView();
   chatView_ = createChatView();
-
-  stacked_->addWidget(loginView_);
-  stacked_->addWidget(chatView_);
-  stacked_->setCurrentWidget(loginView_);
-
-  auto *layout = new QVBoxLayout(this);
-  layout->addWidget(stacked_);
 }
+
+void ChatWindow::setHandler(StackedWidgetHandler *handler) {
+  handler_ = handler;
+  auto *layout = new QVBoxLayout(this);
+  layout->addWidget(handler_->widget());
+}
+
+QWidget *ChatWindow::chatView() const { return chatView_; }
 
 ChatWindow::~ChatWindow() {
   stopMessageStream();
@@ -49,57 +44,16 @@ ChatWindow::~ChatWindow() {
 }
 
 void ChatWindow::closeEvent(QCloseEvent *event) {
-  const QString pseudonym =
-      pseudonymInput_ ? pseudonymInput_->text().trimmed() : QString{};
-
   stopMessageStream();
   stopClientEventStream();
 
-  if (!pseudonym.isEmpty()) {
-    emit disconnectRequested(pseudonym);
+  if (!pseudonym_.isEmpty()) {
+    emit disconnectRequested(pseudonym_);
   }
 
   connected_ = false;
 
   QWidget::closeEvent(event);
-}
-
-QWidget *ChatWindow::createLoginView() {
-  auto *widget = new QWidget(this);
-  auto *layout = new QVBoxLayout(widget);
-  layout->setContentsMargins(24, 24, 24, 24);
-  layout->setSpacing(16);
-
-  auto *formLayout = new QFormLayout();
-  formLayout->setLabelAlignment(Qt::AlignRight);
-  formLayout->setFormAlignment(Qt::AlignTop);
-
-  pseudonymInput_ = new QLineEdit(widget);
-  pseudonymInput_->setText("John");
-  formLayout->addRow("Pseudonym:", pseudonymInput_);
-
-  genderInput_ = new QComboBox(widget);
-  genderInput_->addItem("Male");
-  genderInput_->addItem("Female");
-  genderInput_->setCurrentText("Male");
-  formLayout->addRow("Gender:", genderInput_);
-
-  countryInput_ = new QLineEdit(widget);
-  countryInput_->setText("France");
-  formLayout->addRow("Country:", countryInput_);
-
-  layout->addLayout(formLayout);
-
-  connectButton_ = new QPushButton("Connect", widget);
-  connectButton_->setDefault(true);
-  layout->addWidget(connectButton_);
-
-  layout->addStretch();
-
-  connect(connectButton_, &QPushButton::clicked, this,
-          [this]() { handleConnect(); });
-
-  return widget;
 }
 
 QWidget *ChatWindow::createChatView() {
@@ -183,8 +137,7 @@ void ChatWindow::addPrivateMessage(const QString &author,
       window->show();
     }
   } else {
-    const auto myPseudonym = pseudonymInput_->text().trimmed();
-    window = new PrivateChatWindow(myPseudonym, author, this);
+    window = new PrivateChatWindow(pseudonym_, author, this);
 
     connect(window, &QObject::destroyed, this,
             [this, key]() { privateChats_.remove(key); });
@@ -217,45 +170,16 @@ void ChatWindow::handleSend() {
   emit sendMessageRequested(text);
 }
 
-void ChatWindow::handleConnect() {
-  const auto pseudonym = pseudonymInput_->text().trimmed();
-  const auto gender = genderInput_->currentText().trimmed();
-  const auto country = countryInput_->text().trimmed();
-
-  if (pseudonym.isEmpty() || gender.isEmpty() || country.isEmpty()) {
-    QMessageBox::warning(
-        this, "Incomplete details",
-        "Please provide pseudonym, gender, and country before connecting.");
-    return;
-  }
-
-  connectButton_->setEnabled(false);
-
-  emit connectRequested(pseudonym, gender, country);
-}
-
-void ChatWindow::onConnectFinished(bool ok, const QString &errorText,
-                                   bool accepted, const QString &message,
-                                   const QStringList &connectedPseudonyms) {
-  connectButton_->setEnabled(true);
-
-  if (!ok) {
-    QMessageBox::critical(this, "Connection failed",
-                          QStringLiteral("Unable to connect to %1.\n%2")
-                              .arg(serverAddress_)
-                              .arg(errorText));
-    return;
-  }
-
-  if (!accepted) {
-    QMessageBox::warning(this, "Connection rejected", message);
-    return;
-  }
-
+void ChatWindow::onLoginSucceeded(const QString &pseudonym,
+                                  const QString &country,
+                                  const QString &welcomeMessage,
+                                  const QStringList &connectedPseudonyms) {
+  pseudonym_ = pseudonym;
+  country_ = country;
   connected_ = true;
-  setWindowTitle(QStringLiteral("Chat Client - %1")
-                     .arg(pseudonymInput_->text().trimmed()));
-  switchToChatView(message, connectedPseudonyms);
+  setWindowTitle(QStringLiteral("Chat Client - %1").arg(pseudonym_));
+  initChatView(welcomeMessage, connectedPseudonyms);
+  handler_->showChatView();
   startMessageStream();
   startClientEventStream();
 }
@@ -307,15 +231,14 @@ void ChatWindow::onClientEventStreamError(const QString &errorText) {
              QStringLiteral("Client event stream stopped: %1").arg(errorText));
 }
 
-void ChatWindow::switchToChatView(const QString &welcomeMessage,
-                                  const QStringList &connectedPseudonyms) {
-  stacked_->setCurrentWidget(chatView_);
+void ChatWindow::initChatView(const QString &welcomeMessage,
+                              const QStringList &connectedPseudonyms) {
   conversation_->clear();
   if (clientsList_ != nullptr) {
     clientsList_->clear();
 
     // Add self first
-    addClientToList(pseudonymInput_->text().trimmed());
+    addClientToList(pseudonym_);
 
     // Add all other connected clients from initial roster
     for (const auto &name : connectedPseudonyms) {
@@ -329,8 +252,7 @@ void ChatWindow::switchToChatView(const QString &welcomeMessage,
 
   addMessage("System",
              QStringLiteral("Connected as %1 from %2")
-                 .arg(pseudonymInput_->text().trimmed(),
-                      countryInput_->text().trimmed()),
+                 .arg(pseudonym_, country_),
              MESSAGE_COLOR_SYSTEM_);
 
   if (!welcomeMessage.trimmed().isEmpty()) {
@@ -434,9 +356,8 @@ void ChatWindow::showClientsContextMenu(const QPoint &pos) {
   }
 
   const auto pseudonym = item->text();
-  const auto myPseudonym = pseudonymInput_->text().trimmed();
 
-  if (QString::compare(pseudonym, myPseudonym, Qt::CaseInsensitive) == 0) {
+  if (QString::compare(pseudonym, pseudonym_, Qt::CaseInsensitive) == 0) {
     return;
   }
 
@@ -454,8 +375,7 @@ void ChatWindow::openPrivateChatWith(const QString &pseudonym) {
     return;
   }
 
-  const auto myPseudonym = pseudonymInput_->text().trimmed();
-  auto *window = new PrivateChatWindow(myPseudonym, pseudonym, this);
+  auto *window = new PrivateChatWindow(pseudonym_, pseudonym, this);
 
   connect(window, &QObject::destroyed, this,
           [this, key]() { privateChats_.remove(key); });

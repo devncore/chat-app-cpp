@@ -8,31 +8,30 @@
 #include <QStringList>
 #include <QWidget>
 
-class QFormLayout;
 class QLineEdit;
-class QComboBox;
 class QListWidget;
 class QListWidgetItem;
 class QMenu;
 class QPushButton;
-class QStackedWidget;
 class QTextBrowser;
 class QCloseEvent;
 class PrivateChatWindow;
+class StackedWidgetHandler;
 
 class ChatWindow : public QWidget {
   Q_OBJECT
 
 public:
-  explicit ChatWindow(QString serverAddress, QWidget *parent = nullptr);
+  explicit ChatWindow(QWidget *parent = nullptr);
   ~ChatWindow() override;
+
+  void setHandler(StackedWidgetHandler *handler);
+  QWidget *chatView() const;
 
 protected:
   void closeEvent(QCloseEvent *event) override;
 
 signals:
-  void connectRequested(const QString &pseudonym, const QString &gender,
-                        const QString &country);
   void disconnectRequested(const QString &pseudonym);
   void sendMessageRequested(
       const QString &content,
@@ -43,9 +42,9 @@ signals:
   void stopClientEventStreamRequested();
 
 public slots:
-  void onConnectFinished(bool ok, const QString &errorText, bool accepted,
-                         const QString &message,
-                         const QStringList &connectedPseudonyms);
+  void onLoginSucceeded(const QString &pseudonym, const QString &country,
+                        const QString &welcomeMessage,
+                        const QStringList &connectedPseudonyms);
   void onDisconnectFinished(bool ok, const QString &errorText);
   void onSendMessageFinished(bool ok, const QString &errorText);
   void onMessageReceived(const QString &author, const QString &content,
@@ -59,15 +58,13 @@ private:
   static inline QString MESSAGE_COLOR_USER_CONNECT_{"green"};
   static inline QString MESSAGE_COLOR_USER_DISCONNECT_{"purple"};
 
-  QWidget *createLoginView();
   QWidget *createChatView();
   void addMessage(const QString &author, const QString &message,
                   QString color = "black");
   void addPrivateMessage(const QString &author, const QString &message);
   void handleSend();
-  void handleConnect();
-  void switchToChatView(const QString &welcomeMessage,
-                        const QStringList &connectedPseudonyms);
+  void initChatView(const QString &welcomeMessage,
+                    const QStringList &connectedPseudonyms);
   bool addClientToList(const QString &pseudonym);
   bool removeClientFromList(const QString &pseudonym);
   void handleClientEvent(int eventType, const QString &pseudonym);
@@ -80,19 +77,15 @@ private:
   void onPrivateMessageRequested(const QString &recipient,
                                  const QString &content);
 
-  QStackedWidget *stacked_;
-  QWidget *loginView_;
+  StackedWidgetHandler *handler_{nullptr};
   QWidget *chatView_;
-  QLineEdit *pseudonymInput_;
-  QComboBox *genderInput_;
-  QLineEdit *countryInput_;
-  QPushButton *connectButton_;
   QTextBrowser *conversation_;
   QListWidget *clientsList_{nullptr};
   QLineEdit *input_;
   QPushButton *sendButton_;
   bool connected_{false};
-  QString serverAddress_;
+  QString pseudonym_;
+  QString country_;
   QMenu *clientsContextMenu_{nullptr};
   QHash<QString, QPointer<PrivateChatWindow>> privateChats_;
 };
