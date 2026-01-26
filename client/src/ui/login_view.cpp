@@ -12,8 +12,7 @@
 LoginView::LoginView(QString serverAddress, QWidget *parent)
     : QWidget(parent), serverAddress_(std::move(serverAddress)) {
   auto *layout = new QVBoxLayout(this);
-  layout->setContentsMargins(24, 24, 24, 24);
-  layout->setSpacing(16);
+  layout->setContentsMargins(48, 48, 48, 48);
 
   auto *formLayout = new QFormLayout();
   formLayout->setLabelAlignment(Qt::AlignRight);
@@ -39,8 +38,6 @@ LoginView::LoginView(QString serverAddress, QWidget *parent)
   connectButton_->setDefault(true);
   layout->addWidget(connectButton_);
 
-  layout->addStretch();
-
   connect(connectButton_, &QPushButton::clicked, this,
           [this]() { handleConnect(); });
 }
@@ -49,9 +46,7 @@ QString LoginView::pseudonym() const {
   return pseudonymInput_->text().trimmed();
 }
 
-QString LoginView::country() const {
-  return countryInput_->text().trimmed();
-}
+QString LoginView::country() const { return countryInput_->text().trimmed(); }
 
 void LoginView::handleConnect() {
   const auto pseudonym = pseudonymInput_->text().trimmed();

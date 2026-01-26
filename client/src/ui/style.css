@@ -1,0 +1,28 @@
+* {
+    background-color: #e5f3a5;
+    color: #2e7d32;
+}
+
+QTextBrowser,
+QListWidget,
+QLineEdit {
+    background-color: #ffffff;
+    color: #1b5e20;
+}
+
+QPushButton {
+    background-color: #4caf50;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+QPushButton:pressed {
+    background-color: #388e3c;
+}
+
+QPushButton:disabled {
+    background-color: #a5d6a7;
+    color: #c8e6c9;
+}

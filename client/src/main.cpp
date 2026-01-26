@@ -1,5 +1,7 @@
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QFile>
+#include <QTextStream>
 
 #include "service/chat_service_grpc.hpp"
 #include "ui/chat_window.hpp"
@@ -19,6 +21,16 @@ QString getServerAddressFromArguments(const QApplication &app) {
 
   return parser.value(serverOption);
 }
+
+void useExternalStyleSheet(QApplication &app, const QString &cssFilePath) {
+  QFile file(cssFilePath);
+  if (file.open(QFile::ReadOnly | QFile::Text)) {
+    QTextStream stream(&file);
+    app.setStyleSheet(stream.readAll());
+  } else {
+    qDebug() << "Fails to open style sheet?=.\n";
+  }
+}
 } // namespace
 
 int main(int argc, char *argv[]) {
@@ -26,6 +38,9 @@ int main(int argc, char *argv[]) {
 
   // parse command line arguments
   const QString serverAddress = getServerAddressFromArguments(app);
+
+  // apply external stylesheet
+  useExternalStyleSheet(app, "./client/src/ui/style.css");
 
   // instantiate components
   ChatWindow window;
