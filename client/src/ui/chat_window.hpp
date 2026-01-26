@@ -14,9 +14,7 @@ class QListWidgetItem;
 class QMenu;
 class QPushButton;
 class QTextBrowser;
-class QCloseEvent;
 class PrivateChatWindow;
-class StackedWidgetHandler;
 
 class ChatWindow : public QWidget {
   Q_OBJECT
@@ -25,13 +23,11 @@ public:
   explicit ChatWindow(QWidget *parent = nullptr);
   ~ChatWindow() override;
 
-  void setHandler(StackedWidgetHandler *handler);
-  QWidget *chatView() const;
-
-protected:
-  void closeEvent(QCloseEvent *event) override;
+public:
+  void prepareClose();
 
 signals:
+  void loginCompleted();
   void disconnectRequested(const QString &pseudonym);
   void sendMessageRequested(
       const QString &content,
@@ -58,7 +54,7 @@ private:
   static inline QString MESSAGE_COLOR_USER_CONNECT_{"green"};
   static inline QString MESSAGE_COLOR_USER_DISCONNECT_{"purple"};
 
-  QWidget *createChatView();
+  void setupUi();
   void addMessage(const QString &author, const QString &message,
                   QString color = "black");
   void addPrivateMessage(const QString &author, const QString &message);
@@ -77,8 +73,6 @@ private:
   void onPrivateMessageRequested(const QString &recipient,
                                  const QString &content);
 
-  StackedWidgetHandler *handler_{nullptr};
-  QWidget *chatView_;
   QTextBrowser *conversation_;
   QListWidget *clientsList_{nullptr};
   QLineEdit *input_;

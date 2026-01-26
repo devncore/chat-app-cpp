@@ -6,7 +6,7 @@
 #include "service/chat_service_grpc.hpp"
 #include "ui/chat_window.hpp"
 #include "ui/login_view.hpp"
-#include "ui/stacked_widget_handler.hpp"
+#include "ui/main_window.hpp"
 
 namespace {
 QString getServerAddressFromArguments(const QApplication &app) {
@@ -43,13 +43,11 @@ int main(int argc, char *argv[]) {
   useExternalStyleSheet(app, "./client/src/ui/style.css");
 
   // instantiate components
-  ChatWindow window;
-  auto *loginView = new LoginView(serverAddress, &window);
-  auto *handler =
-      new StackedWidgetHandler(loginView, window.chatView(), &window);
-  window.setHandler(handler);
+  MainWindow mainWindow(serverAddress);
+  auto *loginView = mainWindow.loginView();
+  auto *chatWindow = mainWindow.chatWindow();
   auto *grpcChatClient =
-      new ChatServiceGrpc(serverAddress.toStdString(), &window);
+      new ChatServiceGrpc(serverAddress.toStdString(), &mainWindow);
 
   // signals LoginView -> grpc
   QObject::connect(loginView, &LoginView::connectRequested, grpcChatClient,
@@ -60,39 +58,39 @@ int main(int argc, char *argv[]) {
                    &LoginView::onConnectFinished);
 
   // signals LoginView -> ChatWindow
-  QObject::connect(loginView, &LoginView::loginSucceeded, &window,
+  QObject::connect(loginView, &LoginView::loginSucceeded, chatWindow,
                    &ChatWindow::onLoginSucceeded);
 
   // signals ChatWindow -> grpc
-  QObject::connect(&window, &ChatWindow::disconnectRequested, grpcChatClient,
+  QObject::connect(chatWindow, &ChatWindow::disconnectRequested, grpcChatClient,
                    &ChatServiceGrpc::disconnectFromServer);
-  QObject::connect(&window, &ChatWindow::sendMessageRequested, grpcChatClient,
+  QObject::connect(chatWindow, &ChatWindow::sendMessageRequested, grpcChatClient,
                    &ChatServiceGrpc::sendChatMessage);
-  QObject::connect(&window, &ChatWindow::startMessageStreamRequested,
+  QObject::connect(chatWindow, &ChatWindow::startMessageStreamRequested,
                    grpcChatClient, &ChatServiceGrpc::startMessageStreamSlot);
-  QObject::connect(&window, &ChatWindow::stopMessageStreamRequested,
+  QObject::connect(chatWindow, &ChatWindow::stopMessageStreamRequested,
                    grpcChatClient, &ChatServiceGrpc::stopMessageStreamSlot);
-  QObject::connect(&window, &ChatWindow::startClientEventStreamRequested,
+  QObject::connect(chatWindow, &ChatWindow::startClientEventStreamRequested,
                    grpcChatClient,
                    &ChatServiceGrpc::startClientEventStreamSlot);
-  QObject::connect(&window, &ChatWindow::stopClientEventStreamRequested,
+  QObject::connect(chatWindow, &ChatWindow::stopClientEventStreamRequested,
                    grpcChatClient, &ChatServiceGrpc::stopClientEventStreamSlot);
 
   // signals grpc -> ChatWindow
   QObject::connect(grpcChatClient, &ChatServiceGrpc::disconnectFinished,
-                   &window, &ChatWindow::onDisconnectFinished);
+                   chatWindow, &ChatWindow::onDisconnectFinished);
   QObject::connect(grpcChatClient, &ChatServiceGrpc::sendMessageFinished,
-                   &window, &ChatWindow::onSendMessageFinished);
-  QObject::connect(grpcChatClient, &ChatServiceGrpc::messageReceived, &window,
+                   chatWindow, &ChatWindow::onSendMessageFinished);
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::messageReceived, chatWindow,
                    &ChatWindow::onMessageReceived);
   QObject::connect(grpcChatClient, &ChatServiceGrpc::messageStreamError,
-                   &window, &ChatWindow::onMessageStreamError);
+                   chatWindow, &ChatWindow::onMessageStreamError);
   QObject::connect(grpcChatClient, &ChatServiceGrpc::clientEventReceived,
-                   &window, &ChatWindow::onClientEventReceived);
+                   chatWindow, &ChatWindow::onClientEventReceived);
   QObject::connect(grpcChatClient, &ChatServiceGrpc::clientEventStreamError,
-                   &window, &ChatWindow::onClientEventStreamError);
+                   chatWindow, &ChatWindow::onClientEventStreamError);
 
-  window.show();
+  mainWindow.show();
 
   return app.exec();
 }

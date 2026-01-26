@@ -4,7 +4,6 @@
 
 #include <QAbstractItemView>
 #include <QAction>
-#include <QCloseEvent>
 #include <QDateTime>
 #include <QDebug>
 #include <QHBoxLayout>
@@ -19,31 +18,17 @@
 #include <QTextBrowser>
 #include <QVBoxLayout>
 
-#include <utility>
-
 #include "chat.grpc.pb.h"
 #include "ui/private_chat_window.hpp"
-#include "ui/stacked_widget_handler.hpp"
-ChatWindow::ChatWindow(QWidget *parent) : QWidget(parent) {
-  setWindowTitle("Chat Client");
-  resize(480, 480);
-  chatView_ = createChatView();
-}
 
-void ChatWindow::setHandler(StackedWidgetHandler *handler) {
-  handler_ = handler;
-  auto *layout = new QVBoxLayout(this);
-  layout->addWidget(handler_->widget());
-}
-
-QWidget *ChatWindow::chatView() const { return chatView_; }
+ChatWindow::ChatWindow(QWidget *parent) : QWidget(parent) { setupUi(); }
 
 ChatWindow::~ChatWindow() {
   stopMessageStream();
   stopClientEventStream();
 }
 
-void ChatWindow::closeEvent(QCloseEvent *event) {
+void ChatWindow::prepareClose() {
   stopMessageStream();
   stopClientEventStream();
 
@@ -52,13 +37,10 @@ void ChatWindow::closeEvent(QCloseEvent *event) {
   }
 
   connected_ = false;
-
-  QWidget::closeEvent(event);
 }
 
-QWidget *ChatWindow::createChatView() {
-  auto *widget = new QWidget(this);
-  auto *layout = new QVBoxLayout(widget);
+void ChatWindow::setupUi() {
+  auto *layout = new QVBoxLayout(this);
   layout->setContentsMargins(12, 12, 12, 12);
   layout->setSpacing(8);
 
@@ -66,13 +48,13 @@ QWidget *ChatWindow::createChatView() {
   contentLayout->setContentsMargins(0, 0, 0, 0);
   contentLayout->setSpacing(8);
 
-  conversation_ = new QTextBrowser(widget);
+  conversation_ = new QTextBrowser(this);
   conversation_->setReadOnly(true);
   conversation_->setPlaceholderText("Conversation will appear here...");
   conversation_->setOpenExternalLinks(true);
   contentLayout->addWidget(conversation_, 3);
 
-  clientsList_ = new QListWidget(widget);
+  clientsList_ = new QListWidget(this);
   clientsList_->setSelectionMode(QAbstractItemView::SingleSelection);
   clientsList_->setEditTriggers(QAbstractItemView::NoEditTriggers);
   clientsList_->setSortingEnabled(true);
@@ -83,10 +65,10 @@ QWidget *ChatWindow::createChatView() {
 
   layout->addLayout(contentLayout, 1);
 
-  input_ = new QLineEdit(widget);
+  input_ = new QLineEdit(this);
   input_->setPlaceholderText("Type a message and press Enter...");
 
-  sendButton_ = new QPushButton("Send", widget);
+  sendButton_ = new QPushButton("Send", this);
   sendButton_->setDefault(true);
 
   auto *inputLayout = new QHBoxLayout();
@@ -112,8 +94,6 @@ QWidget *ChatWindow::createChatView() {
       openPrivateChatWith(item->text());
     }
   });
-
-  return widget;
 }
 
 void ChatWindow::addMessage(const QString &author, const QString &message,
@@ -177,9 +157,8 @@ void ChatWindow::onLoginSucceeded(const QString &pseudonym,
   pseudonym_ = pseudonym;
   country_ = country;
   connected_ = true;
-  setWindowTitle(QStringLiteral("Chat Client - %1").arg(pseudonym_));
   initChatView(welcomeMessage, connectedPseudonyms);
-  handler_->showChatView();
+  emit loginCompleted();
   startMessageStream();
   startClientEventStream();
 }
@@ -250,10 +229,10 @@ void ChatWindow::initChatView(const QString &welcomeMessage,
     }
   }
 
-  addMessage("System",
-             QStringLiteral("Connected as %1 from %2")
-                 .arg(pseudonym_, country_),
-             MESSAGE_COLOR_SYSTEM_);
+  addMessage(
+      "System",
+      QStringLiteral("Connected as %1 from %2").arg(pseudonym_, country_),
+      MESSAGE_COLOR_SYSTEM_);
 
   if (!welcomeMessage.trimmed().isEmpty()) {
     addMessage("Server", welcomeMessage.trimmed(), MESSAGE_COLOR_SYSTEM_);
