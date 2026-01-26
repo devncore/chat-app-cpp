@@ -3,8 +3,10 @@
 #include <QMainWindow>
 #include <QString>
 
+class QAction;
 class QCloseEvent;
 class QDockWidget;
+class QToolBar;
 class LoginView;
 class ChatWindow;
 
@@ -23,9 +25,12 @@ protected:
 
 private slots:
   void onLoginCompleted();
+  void onDisconnectTriggered();
 
 private:
   QDockWidget *loginDock_;
   LoginView *loginView_;
   ChatWindow *chatWindow_;
+  QToolBar *chatToolBar_;
+  QAction *disconnectAction_;
 };
