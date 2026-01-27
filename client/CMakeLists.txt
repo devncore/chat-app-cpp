@@ -14,6 +14,7 @@ if(CCACHE_PROGRAM)
 endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(SQLiteCpp REQUIRED)
 
 qt_standard_project_setup()
 
@@ -30,12 +31,14 @@ qt_add_executable(chat_client
     src/ui/login_view.cpp
     src/ui/private_chat_window.cpp
     src/service/chat_service_grpc.cpp
+    src/database/database_manager_sqlite.cpp
 )
 
 target_include_directories(chat_client PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(chat_client 
-    PRIVATE 
-        Qt6::Widgets 
-        chat_proto)
+target_link_libraries(chat_client
+    PRIVATE
+        Qt6::Widgets
+        chat_proto
+        SQLiteCpp)
