@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace database {
 
@@ -24,7 +25,7 @@ public:
    * @return Empty on success, or error message on failure.
    */
   [[nodiscard]] virtual OptionalErrorMessage
-  clientConnectionEvent(const std::string &pseudonymStd) noexcept = 0;
+  clientConnectionEvent(std::string_view pseudonymStd) noexcept = 0;
 
   /**
    * @brief Increment transmitted message count for the given pseudonym.
@@ -32,7 +33,7 @@ public:
    * @return Empty on success, or error message on failure.
    */
   [[nodiscard]] virtual OptionalErrorMessage
-  incrementTxMessage(const std::string &pseudonymStd) noexcept = 0;
+  incrementTxMessage(std::string_view pseudonymStd) noexcept = 0;
 
   /**
    * @brief Update the cumulated connection time for the given pseudonym.
@@ -41,7 +42,7 @@ public:
    * @return Empty on success, or error message on failure.
    */
   [[nodiscard]] virtual OptionalErrorMessage
-  updateCumulatedConnectionTime(const std::string &pseudonymStd,
+  updateCumulatedConnectionTime(std::string_view pseudonymStd,
                                 uint64_t durationInSec) noexcept = 0;
 
   /**

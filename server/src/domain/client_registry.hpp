@@ -4,6 +4,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -20,19 +21,19 @@ struct ClientInfo {
 
 class ClientRegistry : public events::IServiceEventObserver {
 public:
-  bool isPseudonymAvailable(const std::string &peer,
-                            const std::string &pseudonym) const;
+  bool isPseudonymAvailable(std::string_view peer,
+                            std::string_view pseudonym) const;
 
-  bool getPseudonymForPeer(const std::string &peer, std::string &out) const;
+  bool getPseudonymForPeer(std::string_view peer, std::string &out) const;
 
-  bool getPeerForPseudonym(const std::string &pseudonym, std::string &out) const;
+  bool getPeerForPseudonym(std::string_view pseudonym, std::string &out) const;
 
   std::optional<std::chrono::steady_clock::duration>
-  getConnectionDuration(const std::string &peer) const;
+  getConnectionDuration(std::string_view peer) const;
 
   std::vector<std::string> getConnectedPseudonyms() const;
 
-  bool isPeerConnected(const std::string &peer) const;
+  bool isPeerConnected(std::string_view peer) const;
 
   // Grant access to IServiceEventObserver interface for registration
   events::IServiceEventObserver *asObserver();

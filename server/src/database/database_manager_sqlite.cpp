@@ -47,7 +47,7 @@ OptionalErrorMessage DatabaseManagerSQLite::ensureOpen() {
 }
 
 OptionalErrorMessage DatabaseManagerSQLite::clientConnectionEvent(
-    const std::string &pseudonymStd) noexcept {
+    std::string_view pseudonymStd) noexcept {
   if (const auto error = ensureOpen(); error.has_value()) {
     return error;
   }
@@ -56,7 +56,7 @@ OptionalErrorMessage DatabaseManagerSQLite::clientConnectionEvent(
     SQLite::Statement queryCheck(
         *db_, std::string("SELECT nb_of_connection FROM ") + statisticsTable_ +
                   " WHERE pseudonym = ?;");
-    queryCheck.bind(1, pseudonymStd);
+    queryCheck.bind(1, std::string(pseudonymStd));
 
     if (queryCheck.executeStep()) {
       const int current = queryCheck.getColumn(0).getInt();
@@ -65,7 +65,7 @@ OptionalErrorMessage DatabaseManagerSQLite::clientConnectionEvent(
           *db_, std::string("UPDATE ") + statisticsTable_ +
                     " SET nb_of_connection = ? WHERE pseudonym = ?;");
       queryUpdate.bind(1, current + 1);
-      queryUpdate.bind(2, pseudonymStd);
+      queryUpdate.bind(2, std::string(pseudonymStd));
 
       queryUpdate.exec();
       std::cout << "Incremented nb_of_connection for: " << pseudonymStd
@@ -78,7 +78,7 @@ OptionalErrorMessage DatabaseManagerSQLite::clientConnectionEvent(
                   " (pseudonym, nb_of_connection, tx_messages, "
                   "cumulated_connection_time_sec) "
                   "VALUES (?, 1, 0, 0);");
-    queryInsert.bind(1, pseudonymStd);
+    queryInsert.bind(1, std::string(pseudonymStd));
 
     queryInsert.exec();
     std::cout << "New entry created for: " << pseudonymStd << std::endl;
@@ -90,7 +90,7 @@ OptionalErrorMessage DatabaseManagerSQLite::clientConnectionEvent(
 }
 
 OptionalErrorMessage DatabaseManagerSQLite::incrementTxMessage(
-    const std::string &pseudonymStd) noexcept {
+    std::string_view pseudonymStd) noexcept {
   if (const auto error = ensureOpen(); error.has_value()) {
     return error;
   }
@@ -99,7 +99,7 @@ OptionalErrorMessage DatabaseManagerSQLite::incrementTxMessage(
     SQLite::Statement queryCheck(*db_, std::string("SELECT tx_messages FROM ") +
                                            statisticsTable_ +
                                            " WHERE pseudonym = ?;");
-    queryCheck.bind(1, pseudonymStd);
+    queryCheck.bind(1, std::string(pseudonymStd));
 
     if (queryCheck.executeStep()) {
       const int current = queryCheck.getColumn(0).getInt();
@@ -108,7 +108,7 @@ OptionalErrorMessage DatabaseManagerSQLite::incrementTxMessage(
           *db_, std::string("UPDATE ") + statisticsTable_ +
                     " SET tx_messages = ? WHERE pseudonym = ?;");
       queryUpdate.bind(1, current + 1);
-      queryUpdate.bind(2, pseudonymStd);
+      queryUpdate.bind(2, std::string(pseudonymStd));
 
       queryUpdate.exec();
       std::cout << "Incremented tx_messages to '" << current + 1
@@ -117,7 +117,7 @@ OptionalErrorMessage DatabaseManagerSQLite::incrementTxMessage(
     }
 
     return std::string("Incremented tx_messages skipped because pseudonym ('") +
-           pseudonymStd +
+           std::string(pseudonymStd) +
            "') primary key does not exist in the db table 'Statistics'.";
   } catch (const std::exception &ex) {
     return std::string("Failed to update tx message count: ") + ex.what();
@@ -128,7 +128,7 @@ OptionalErrorMessage DatabaseManagerSQLite::incrementTxMessage(
 
 [[nodiscard]] OptionalErrorMessage
 DatabaseManagerSQLite::updateCumulatedConnectionTime(
-    const std::string &pseudonymStd, uint64_t durationInSec) noexcept {
+    std::string_view pseudonymStd, uint64_t durationInSec) noexcept {
   if (const auto error = ensureOpen(); error.has_value()) {
     return error;
   }
@@ -137,7 +137,7 @@ DatabaseManagerSQLite::updateCumulatedConnectionTime(
     SQLite::Statement queryCheck(
         *db_, std::string("SELECT cumulated_connection_time_sec FROM ") +
                   statisticsTable_ + " WHERE pseudonym = ?;");
-    queryCheck.bind(1, pseudonymStd);
+    queryCheck.bind(1, std::string(pseudonymStd));
 
     if (queryCheck.executeStep()) {
       const uint64_t current =
@@ -149,7 +149,7 @@ DatabaseManagerSQLite::updateCumulatedConnectionTime(
                     " SET cumulated_connection_time_sec = ? WHERE pseudonym = "
                     "?;");
       queryUpdate.bind(1, static_cast<int64_t>(updated));
-      queryUpdate.bind(2, pseudonymStd);
+      queryUpdate.bind(2, std::string(pseudonymStd));
 
       queryUpdate.exec();
       std::cout << "Incremented cumulated_connection_time_sec to '" << updated
@@ -160,7 +160,7 @@ DatabaseManagerSQLite::updateCumulatedConnectionTime(
     return std::string(
                "Incremented cumulated_connection_time_sec skipped because "
                "pseudonym ('") +
-           pseudonymStd +
+           std::string(pseudonymStd) +
            "') primary key does not exist in the db table 'Statistics'.";
   } catch (const std::exception &ex) {
     return std::string("Failed to update cumulated connection time: ") +

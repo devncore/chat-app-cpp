@@ -3,6 +3,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include <grpcpp/grpcpp.h>
 
@@ -39,16 +40,16 @@ public:
    * @param country The user's country.
    * @return Status and response from the server.
    */
-  virtual ConnectResult connect(const std::string &pseudonym,
-                                const std::string &gender,
-                                const std::string &country) = 0;
+  virtual ConnectResult connect(std::string_view pseudonym,
+                                std::string_view gender,
+                                std::string_view country) = 0;
 
   /**
    * @brief Disconnect the client from the server.
    * @param pseudonym The user's display name.
    * @return Status returned by the server.
    */
-  virtual grpc::Status disconnect(const std::string &pseudonym) = 0;
+  virtual grpc::Status disconnect(std::string_view pseudonym) = 0;
 
   /**
    * @brief Send a chat message to the server.
@@ -56,7 +57,7 @@ public:
    * @param privateRecipient Optional pseudonym for private message recipient.
    * @return Status returned by the server.
    */
-  virtual grpc::Status sendMessage(const std::string &content,
+  virtual grpc::Status sendMessage(std::string_view content,
                                    const std::optional<std::string> &privateRecipient = std::nullopt) = 0;
 
   /**

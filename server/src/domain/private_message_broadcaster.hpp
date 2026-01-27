@@ -5,6 +5,7 @@
 #include <deque>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include "chat.pb.h"
@@ -24,10 +25,10 @@ public:
   virtual ~IPrivateMessageBroadcaster() = default;
 
   virtual NextPrivateMessageStatus
-  nextPrivateMessage(const std::string &peer, std::chrono::milliseconds waitFor,
+  nextPrivateMessage(std::string_view peer, std::chrono::milliseconds waitFor,
                      chat::InformClientsNewMessageResponse &out) = 0;
 
-  virtual bool normalizePrivateMessageIndex(const std::string &peer) = 0;
+  virtual bool normalizePrivateMessageIndex(std::string_view peer) = 0;
 };
 
 class PrivateMessageBroadcaster : public IPrivateMessageBroadcaster,
@@ -37,10 +38,10 @@ public:
 
   // IPrivateMessageBroadcaster
   NextPrivateMessageStatus
-  nextPrivateMessage(const std::string &peer, std::chrono::milliseconds waitFor,
+  nextPrivateMessage(std::string_view peer, std::chrono::milliseconds waitFor,
                      chat::InformClientsNewMessageResponse &out) override;
 
-  bool normalizePrivateMessageIndex(const std::string &peer) override;
+  bool normalizePrivateMessageIndex(std::string_view peer) override;
 
   // IServiceEventObserver
   void onClientConnected(const events::ClientConnectedEvent &event) override;

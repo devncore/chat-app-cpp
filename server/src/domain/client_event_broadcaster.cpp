@@ -9,7 +9,7 @@ ClientEventBroadcaster::ClientEventBroadcaster(
     : clientRegistry_(clientRegistry) {}
 
 void ClientEventBroadcaster::broadcastClientEvent(
-    const std::string &pseudonym,
+    std::string_view pseudonym,
     chat::ClientEventData_ClientEventType eventType) {
   if (pseudonym.empty()) {
     return;
@@ -17,7 +17,7 @@ void ClientEventBroadcaster::broadcastClientEvent(
 
   chat::ClientEventData payload;
   payload.set_event_type(eventType);
-  payload.set_pseudonym(pseudonym);
+  payload.set_pseudonym(std::string(pseudonym));
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -28,18 +28,19 @@ void ClientEventBroadcaster::broadcastClientEvent(
 }
 
 NextClientEventStatus ClientEventBroadcaster::nextClientEvent(
-    const std::string &peer, std::chrono::milliseconds waitFor,
+    std::string_view peer, std::chrono::milliseconds waitFor,
     chat::ClientEventData &out) {
   std::unique_lock<std::mutex> lock(mutex_);
+  const std::string peerKey(peer);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerIndices_.erase(peer);
+    peerIndices_.erase(peerKey);
     return NextClientEventStatus::kPeerMissing;
   }
 
-  auto it = peerIndices_.find(peer);
+  auto it = peerIndices_.find(peerKey);
   if (it == peerIndices_.end()) {
-    it = peerIndices_.emplace(peer, clientEvents_.size()).first;
+    it = peerIndices_.emplace(peerKey, clientEvents_.size()).first;
   }
 
   if (it->second < clientEvents_.size()) {
@@ -51,11 +52,11 @@ NextClientEventStatus ClientEventBroadcaster::nextClientEvent(
   clientEventCv_.wait_for(lock, waitFor);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerIndices_.erase(peer);
+    peerIndices_.erase(peerKey);
     return NextClientEventStatus::kPeerMissing;
   }
 
-  it = peerIndices_.find(peer);
+  it = peerIndices_.find(peerKey);
   if (it == peerIndices_.end()) {
     return NextClientEventStatus::kPeerMissing;
   }
@@ -69,17 +70,18 @@ NextClientEventStatus ClientEventBroadcaster::nextClientEvent(
   return NextClientEventStatus::kNoEvent;
 }
 
-bool ClientEventBroadcaster::normalizeClientEventIndex(const std::string &peer) {
+bool ClientEventBroadcaster::normalizeClientEventIndex(std::string_view peer) {
   std::lock_guard<std::mutex> lock(mutex_);
+  const std::string peerKey(peer);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerIndices_.erase(peer);
+    peerIndices_.erase(peerKey);
     return false;
   }
 
-  auto it = peerIndices_.find(peer);
+  auto it = peerIndices_.find(peerKey);
   if (it == peerIndices_.end()) {
-    peerIndices_[peer] = clientEvents_.size();
+    peerIndices_[peerKey] = clientEvents_.size();
     return true;
   }
 

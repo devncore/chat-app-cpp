@@ -6,19 +6,20 @@ MessageBroadcaster::MessageBroadcaster(const ClientRegistry &clientRegistry)
     : clientRegistry_(clientRegistry) {}
 
 NextMessageStatus
-MessageBroadcaster::nextMessage(const std::string &peer,
+MessageBroadcaster::nextMessage(std::string_view peer,
                                 std::chrono::milliseconds waitFor,
                                 chat::InformClientsNewMessageResponse &out) {
   std::unique_lock<std::mutex> lock(mutex_);
+  const std::string peerKey(peer);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerIndices_.erase(peer);
+    peerIndices_.erase(peerKey);
     return NextMessageStatus::kPeerMissing;
   }
 
-  auto it = peerIndices_.find(peer);
+  auto it = peerIndices_.find(peerKey);
   if (it == peerIndices_.end()) {
-    it = peerIndices_.emplace(peer, messageHistory_.size()).first;
+    it = peerIndices_.emplace(peerKey, messageHistory_.size()).first;
   }
 
   if (it->second < messageHistory_.size()) {
@@ -30,11 +31,11 @@ MessageBroadcaster::nextMessage(const std::string &peer,
   messageCv_.wait_for(lock, waitFor);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerIndices_.erase(peer);
+    peerIndices_.erase(peerKey);
     return NextMessageStatus::kPeerMissing;
   }
 
-  it = peerIndices_.find(peer);
+  it = peerIndices_.find(peerKey);
   if (it == peerIndices_.end()) {
     return NextMessageStatus::kPeerMissing;
   }
@@ -48,17 +49,18 @@ MessageBroadcaster::nextMessage(const std::string &peer,
   return NextMessageStatus::kNoMessage;
 }
 
-bool MessageBroadcaster::normalizeMessageIndex(const std::string &peer) {
+bool MessageBroadcaster::normalizeMessageIndex(std::string_view peer) {
   std::lock_guard<std::mutex> lock(mutex_);
+  const std::string peerKey(peer);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerIndices_.erase(peer);
+    peerIndices_.erase(peerKey);
     return false;
   }
 
-  auto it = peerIndices_.find(peer);
+  auto it = peerIndices_.find(peerKey);
   if (it == peerIndices_.end()) {
-    peerIndices_[peer] = messageHistory_.size();
+    peerIndices_[peerKey] = messageHistory_.size();
     return true;
   }
 

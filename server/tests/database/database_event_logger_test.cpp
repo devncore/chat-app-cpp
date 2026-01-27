@@ -68,7 +68,7 @@ TEST_F(DatabaseEventLoggerTest,
 
 TEST_F(DatabaseEventLoggerTest,
        OnClientConnected_DatabaseError_DoesNotThrow) {
-  mockDb_->clientConnectionEventFn = [](const std::string &) {
+  mockDb_->clientConnectionEventFn = [](std::string_view) {
     return std::optional<std::string>("Database error");
   };
 
@@ -169,7 +169,7 @@ TEST_F(DatabaseEventLoggerTest,
 TEST_F(DatabaseEventLoggerTest,
        OnClientDisconnected_DatabaseError_DoesNotThrow) {
   mockDb_->updateCumulatedConnectionTimeFn =
-      [](const std::string &, uint64_t) {
+      [](std::string_view, uint64_t) {
         return std::optional<std::string>("Database error");
       };
 
@@ -244,7 +244,7 @@ TEST_F(DatabaseEventLoggerTest,
 }
 
 TEST_F(DatabaseEventLoggerTest, OnMessageSent_DatabaseError_DoesNotThrow) {
-  mockDb_->incrementTxMessageFn = [](const std::string &) {
+  mockDb_->incrementTxMessageFn = [](std::string_view) {
     return std::optional<std::string>("Database error");
   };
 

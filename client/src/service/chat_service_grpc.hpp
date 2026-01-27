@@ -30,12 +30,12 @@ public:
   ChatServiceGrpc(const ChatServiceGrpc &) = delete;
   ChatServiceGrpc &operator=(const ChatServiceGrpc &) = delete;
 
-  ConnectResult connect(const std::string &pseudonym, const std::string &gender,
-                        const std::string &country) override;
+  ConnectResult connect(std::string_view pseudonym, std::string_view gender,
+                        std::string_view country) override;
 
-  grpc::Status disconnect(const std::string &pseudonym) override;
+  grpc::Status disconnect(std::string_view pseudonym) override;
 
-  grpc::Status sendMessage(const std::string &content,
+  grpc::Status sendMessage(std::string_view content,
                            const std::optional<std::string> &privateRecipient =
                                std::nullopt) override;
 

@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -25,10 +26,10 @@ public:
   virtual ~IMessageBroadcaster() = default;
 
   virtual NextMessageStatus
-  nextMessage(const std::string &peer, std::chrono::milliseconds waitFor,
+  nextMessage(std::string_view peer, std::chrono::milliseconds waitFor,
               chat::InformClientsNewMessageResponse &out) = 0;
 
-  virtual bool normalizeMessageIndex(const std::string &peer) = 0;
+  virtual bool normalizeMessageIndex(std::string_view peer) = 0;
 };
 
 class MessageBroadcaster : public IMessageBroadcaster,
@@ -37,11 +38,11 @@ public:
   explicit MessageBroadcaster(const ClientRegistry &clientRegistry);
 
   // IMessageBroadcaster
-  NextMessageStatus nextMessage(const std::string &peer,
+  NextMessageStatus nextMessage(std::string_view peer,
                                 std::chrono::milliseconds waitFor,
                                 chat::InformClientsNewMessageResponse &out) override;
 
-  bool normalizeMessageIndex(const std::string &peer) override;
+  bool normalizeMessageIndex(std::string_view peer) override;
 
   // IServiceEventObserver
   void onClientConnected(const events::ClientConnectedEvent &event) override;

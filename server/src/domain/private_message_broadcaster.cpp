@@ -7,16 +7,17 @@ PrivateMessageBroadcaster::PrivateMessageBroadcaster(
     : clientRegistry_(clientRegistry) {}
 
 NextPrivateMessageStatus PrivateMessageBroadcaster::nextPrivateMessage(
-    const std::string &peer, std::chrono::milliseconds waitFor,
+    std::string_view peer, std::chrono::milliseconds waitFor,
     chat::InformClientsNewMessageResponse &out) {
   std::unique_lock<std::mutex> lock(mutex_);
+  const std::string peerKey(peer);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerMessageQueues_.erase(peer);
+    peerMessageQueues_.erase(peerKey);
     return NextPrivateMessageStatus::kPeerMissing;
   }
 
-  auto &queue = peerMessageQueues_[peer];
+  auto &queue = peerMessageQueues_[peerKey];
 
   if (!queue.empty()) {
     out = std::move(queue.front());
@@ -27,11 +28,11 @@ NextPrivateMessageStatus PrivateMessageBroadcaster::nextPrivateMessage(
   messageCv_.wait_for(lock, waitFor);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerMessageQueues_.erase(peer);
+    peerMessageQueues_.erase(peerKey);
     return NextPrivateMessageStatus::kPeerMissing;
   }
 
-  auto queueIt = peerMessageQueues_.find(peer);
+  auto queueIt = peerMessageQueues_.find(peerKey);
   if (queueIt == peerMessageQueues_.end() || queueIt->second.empty()) {
     return NextPrivateMessageStatus::kNoMessage;
   }
@@ -42,15 +43,16 @@ NextPrivateMessageStatus PrivateMessageBroadcaster::nextPrivateMessage(
 }
 
 bool PrivateMessageBroadcaster::normalizePrivateMessageIndex(
-    const std::string &peer) {
+    std::string_view peer) {
   std::lock_guard<std::mutex> lock(mutex_);
+  const std::string peerKey(peer);
 
   if (!clientRegistry_.isPeerConnected(peer)) {
-    peerMessageQueues_.erase(peer);
+    peerMessageQueues_.erase(peerKey);
     return false;
   }
 
-  peerMessageQueues_.try_emplace(peer);
+  peerMessageQueues_.try_emplace(peerKey);
 
   return true;
 }

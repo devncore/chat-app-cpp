@@ -6,8 +6,8 @@
 
 namespace domain {
 
-bool ClientRegistry::isPseudonymAvailable(const std::string &peer,
-                                          const std::string &pseudonym) const {
+bool ClientRegistry::isPseudonymAvailable(std::string_view peer,
+                                          std::string_view pseudonym) const {
   std::lock_guard<std::mutex> lock(mutex_);
 
   return !std::any_of(
@@ -17,11 +17,11 @@ bool ClientRegistry::isPseudonymAvailable(const std::string &peer,
       });
 }
 
-bool ClientRegistry::getPseudonymForPeer(const std::string &peer,
+bool ClientRegistry::getPseudonymForPeer(std::string_view peer,
                                          std::string &out) const {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  auto it = clients_.find(peer);
+  auto it = clients_.find(std::string(peer));
   if (it == clients_.end()) {
     return false;
   }
@@ -30,7 +30,7 @@ bool ClientRegistry::getPseudonymForPeer(const std::string &peer,
   return true;
 }
 
-bool ClientRegistry::getPeerForPseudonym(const std::string &pseudonym,
+bool ClientRegistry::getPeerForPseudonym(std::string_view pseudonym,
                                          std::string &out) const {
   std::lock_guard<std::mutex> lock(mutex_);
 
@@ -48,10 +48,10 @@ bool ClientRegistry::getPeerForPseudonym(const std::string &pseudonym,
 }
 
 std::optional<std::chrono::steady_clock::duration>
-ClientRegistry::getConnectionDuration(const std::string &peer) const {
+ClientRegistry::getConnectionDuration(std::string_view peer) const {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  auto it = clients_.find(peer);
+  auto it = clients_.find(std::string(peer));
   if (it == clients_.end()) {
     return std::nullopt;
   }
@@ -72,9 +72,9 @@ std::vector<std::string> ClientRegistry::getConnectedPseudonyms() const {
   return pseudonyms;
 }
 
-bool ClientRegistry::isPeerConnected(const std::string &peer) const {
+bool ClientRegistry::isPeerConnected(std::string_view peer) const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return clients_.find(peer) != clients_.end();
+  return clients_.find(std::string(peer)) != clients_.end();
 }
 
 events::IServiceEventObserver *ClientRegistry::asObserver() { return this; }

@@ -4,17 +4,18 @@
 
 #include <functional>
 #include <string>
+#include <string_view>
 
 namespace mock {
 
 class MockDatabaseManager : public database::IDatabaseManager {
 public:
   // Configurable callbacks for each method
-  std::function<database::OptionalErrorMessage(const std::string &)>
+  std::function<database::OptionalErrorMessage(std::string_view)>
       clientConnectionEventFn;
-  std::function<database::OptionalErrorMessage(const std::string &)>
+  std::function<database::OptionalErrorMessage(std::string_view)>
       incrementTxMessageFn;
-  std::function<database::OptionalErrorMessage(const std::string &, uint64_t)>
+  std::function<database::OptionalErrorMessage(std::string_view, uint64_t)>
       updateCumulatedConnectionTimeFn;
   std::function<database::OptionalErrorMessage()> printStatisticsTableContentFn;
 
@@ -29,7 +30,7 @@ public:
   mutable uint64_t lastDurationInSec = 0;
 
   [[nodiscard]] database::OptionalErrorMessage
-  clientConnectionEvent(const std::string &pseudonymStd) noexcept override {
+  clientConnectionEvent(std::string_view pseudonymStd) noexcept override {
     ++clientConnectionEventCalls;
     lastPseudonym = pseudonymStd;
     if (clientConnectionEventFn) {
@@ -39,7 +40,7 @@ public:
   }
 
   [[nodiscard]] database::OptionalErrorMessage
-  incrementTxMessage(const std::string &pseudonymStd) noexcept override {
+  incrementTxMessage(std::string_view pseudonymStd) noexcept override {
     ++incrementTxMessageCalls;
     lastPseudonym = pseudonymStd;
     if (incrementTxMessageFn) {
@@ -49,7 +50,7 @@ public:
   }
 
   [[nodiscard]] database::OptionalErrorMessage updateCumulatedConnectionTime(
-      const std::string &pseudonymStd,
+      std::string_view pseudonymStd,
       uint64_t durationInSec) noexcept override {
     ++updateCumulatedConnectionTimeCalls;
     lastPseudonym = pseudonymStd;

@@ -96,15 +96,15 @@ void ChatServiceGrpc::startClientEventStreamSlot() {
 void ChatServiceGrpc::stopClientEventStreamSlot() { stopClientEventStream(); }
 
 ChatServiceGrpc::ConnectResult
-ChatServiceGrpc::connect(const std::string &pseudonym,
-                         const std::string &gender,
-                         const std::string &country) {
+ChatServiceGrpc::connect(std::string_view pseudonym,
+                         std::string_view gender,
+                         std::string_view country) {
   ensureStub();
 
   chat::ConnectRequest request;
-  request.set_pseudonym(pseudonym);
-  request.set_gender(gender);
-  request.set_country(country);
+  request.set_pseudonym(std::string(pseudonym));
+  request.set_gender(std::string(gender));
+  request.set_country(std::string(country));
 
   chat::ConnectResponse response;
   grpc::ClientContext context;
@@ -113,11 +113,11 @@ ChatServiceGrpc::connect(const std::string &pseudonym,
   return {.status = status, .response = response};
 }
 
-grpc::Status ChatServiceGrpc::disconnect(const std::string &pseudonym) {
+grpc::Status ChatServiceGrpc::disconnect(std::string_view pseudonym) {
   ensureStub();
 
   chat::DisconnectRequest request;
-  request.set_pseudonym(pseudonym);
+  request.set_pseudonym(std::string(pseudonym));
 
   google::protobuf::Empty response;
   grpc::ClientContext context;
@@ -127,11 +127,11 @@ grpc::Status ChatServiceGrpc::disconnect(const std::string &pseudonym) {
 }
 
 grpc::Status ChatServiceGrpc::sendMessage(
-    const std::string &content,
+    std::string_view content,
     const std::optional<std::string> &privateRecipient) {
   ensureStub();
   chat::SendMessageRequest request;
-  request.set_content(content);
+  request.set_content(std::string(content));
   if (privateRecipient.has_value()) {
     request.set_private_message_pseudonym(*privateRecipient);
   }

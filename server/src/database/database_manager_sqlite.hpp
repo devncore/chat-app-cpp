@@ -27,11 +27,11 @@ public:
 
   [[nodiscard]] OptionalErrorMessage init();
   [[nodiscard]] OptionalErrorMessage
-  clientConnectionEvent(const std::string &pseudonymStd) noexcept override;
+  clientConnectionEvent(std::string_view pseudonymStd) noexcept override;
   [[nodiscard]] OptionalErrorMessage
-  incrementTxMessage(const std::string &pseudonymStd) noexcept override;
+  incrementTxMessage(std::string_view pseudonymStd) noexcept override;
   [[nodiscard]] OptionalErrorMessage
-  updateCumulatedConnectionTime(const std::string &pseudonymStd,
+  updateCumulatedConnectionTime(std::string_view pseudonymStd,
                                 uint64_t durationInSec) noexcept override;
   [[nodiscard]] OptionalErrorMessage
   printStatisticsTableContent() noexcept override;
