@@ -3,8 +3,10 @@
 #include <QAction>
 #include <QCloseEvent>
 #include <QDockWidget>
+#include <QMessageBox>
 #include <QToolBar>
 
+#include "database/database_manager.hpp"
 #include "ui/chat_window.hpp"
 #include "ui/login_view.hpp"
 
@@ -37,11 +39,37 @@ MainWindow::MainWindow(const QString &serverAddress, QWidget *parent)
   chatToolBar_->hide();
 }
 
+MainWindow::~MainWindow() = default;
+
 LoginView *MainWindow::loginView() const { return loginView_; }
 
 ChatWindow *MainWindow::chatWindow() const { return chatWindow_; }
 
+database::IDatabaseManager *MainWindow::databaseManager() const {
+  return dbManager_.get();
+}
+
+void MainWindow::setDatabaseManager(
+    std::unique_ptr<database::IDatabaseManager> dbManager) {
+  dbManager_ = std::move(dbManager);
+}
+
 void MainWindow::onLoginCompleted() {
+
+  // database intialization error handling
+  if (not dbManager_->isInitialized()) {
+    if (auto error = dbManager_->init(loginView_->pseudonym().toStdString())) {
+      qDebug() << "Database initialization failed:" << error->c_str();
+      QMessageBox::critical(this, "Database Error",
+                            "Cannot access the database. The application will "
+                            "close.\n\nError: " +
+                                QString::fromStdString(*error));
+      close();
+      return;
+    }
+  }
+
+  // manage widgets visibility
   loginDock_->hide();
   chatWindow_->show();
   chatToolBar_->show();

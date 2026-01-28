@@ -90,10 +90,12 @@ void ChatWindow::setupUi() {
       clientsContextMenu_->addAction("Send private message");
   connect(privateMessageAction, &QAction::triggered, this, [this]() {
     auto *item = clientsList_->currentItem();
-    if (item) {
+    if (item != nullptr) {
       openPrivateChatWith(item->text());
     }
   });
+
+  banUnbanAction_ = clientsContextMenu_->addAction("Ban/Unban");
 }
 
 void ChatWindow::addMessage(const QString &author, const QString &message,
@@ -142,8 +144,9 @@ void ChatWindow::handleSend() {
   }
 
   const auto text = input_->text().trimmed();
-  if (text.isEmpty())
+  if (text.isEmpty()) {
     return;
+  }
 
   input_->clear();
 
@@ -242,7 +245,7 @@ void ChatWindow::initChatView(const QString &welcomeMessage,
 }
 
 bool ChatWindow::addClientToList(const QString &pseudonym) {
-  if (!clientsList_) {
+  if (clientsList_ == nullptr) {
     return false;
   }
 
@@ -253,7 +256,7 @@ bool ChatWindow::addClientToList(const QString &pseudonym) {
 
   for (int i = 0; i < clientsList_->count(); ++i) {
     auto *item = clientsList_->item(i);
-    if (item &&
+    if ((item != nullptr) &&
         QString::compare(item->text(), trimmed, Qt::CaseInsensitive) == 0) {
       item->setText(trimmed);
       return false;
@@ -265,7 +268,7 @@ bool ChatWindow::addClientToList(const QString &pseudonym) {
 }
 
 bool ChatWindow::removeClientFromList(const QString &pseudonym) {
-  if (!clientsList_) {
+  if (clientsList_ == nullptr) {
     return false;
   }
 
@@ -276,7 +279,7 @@ bool ChatWindow::removeClientFromList(const QString &pseudonym) {
 
   for (int i = 0; i < clientsList_->count(); ++i) {
     auto *item = clientsList_->item(i);
-    if (item &&
+    if ((item != nullptr) &&
         QString::compare(item->text(), trimmed, Qt::CaseInsensitive) == 0) {
       delete clientsList_->takeItem(i);
       return true;
@@ -287,7 +290,7 @@ bool ChatWindow::removeClientFromList(const QString &pseudonym) {
 }
 
 void ChatWindow::handleClientEvent(int eventType, const QString &pseudonym) {
-  if (!clientsList_) {
+  if (clientsList_ == nullptr) {
     return;
   }
 
@@ -330,7 +333,7 @@ void ChatWindow::stopClientEventStream() {
 
 void ChatWindow::showClientsContextMenu(const QPoint &pos) {
   auto *item = clientsList_->itemAt(pos);
-  if (!item) {
+  if (item == nullptr) {
     return;
   }
 

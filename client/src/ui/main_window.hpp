@@ -3,6 +3,12 @@
 #include <QMainWindow>
 #include <QString>
 
+#include <memory>
+
+namespace database {
+class IDatabaseManager;
+}
+
 class QAction;
 class QCloseEvent;
 class QDockWidget;
@@ -15,10 +21,12 @@ class MainWindow : public QMainWindow {
 
 public:
   explicit MainWindow(const QString &serverAddress, QWidget *parent = nullptr);
-  ~MainWindow() override = default;
+  ~MainWindow() override;
 
   LoginView *loginView() const;
   ChatWindow *chatWindow() const;
+  database::IDatabaseManager *databaseManager() const;
+  void setDatabaseManager(std::unique_ptr<database::IDatabaseManager> dbManager);
 
 protected:
   void closeEvent(QCloseEvent *event) override;
@@ -33,4 +41,5 @@ private:
   ChatWindow *chatWindow_;
   QToolBar *chatToolBar_;
   QAction *disconnectAction_;
+  std::unique_ptr<database::IDatabaseManager> dbManager_;
 };

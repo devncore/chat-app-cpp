@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QTextStream>
 
+#include "database/database_manager_sqlite.hpp"
 #include "service/chat_service_grpc.hpp"
 #include "ui/chat_window.hpp"
 #include "ui/login_view.hpp"
@@ -44,6 +45,8 @@ int main(int argc, char *argv[]) {
 
   // instantiate components
   MainWindow mainWindow(serverAddress);
+  mainWindow.setDatabaseManager(
+      std::make_unique<database::DatabaseManagerSQLite>());
   auto *loginView = mainWindow.loginView();
   auto *chatWindow = mainWindow.chatWindow();
   auto *grpcChatClient =
@@ -60,6 +63,17 @@ int main(int argc, char *argv[]) {
   // signals LoginView -> ChatWindow
   QObject::connect(loginView, &LoginView::loginSucceeded, chatWindow,
                    &ChatWindow::onLoginSucceeded);
+
+  // initialize database after login
+  QObject::connect(loginView, &LoginView::loginSucceeded, &mainWindow,
+                   [&mainWindow](const QString &pseudonym) {
+                     if (auto *dbManager = mainWindow.databaseManager()) {
+                       auto error = dbManager->init(pseudonym.toStdString());
+                       if (error) {
+                         qWarning() << "Failed to init database:" << error->c_str();
+                       }
+                     }
+                   });
 
   // signals ChatWindow -> grpc
   QObject::connect(chatWindow, &ChatWindow::disconnectRequested, grpcChatClient,

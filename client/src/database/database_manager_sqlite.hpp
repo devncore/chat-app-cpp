@@ -5,6 +5,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "database/database_manager.hpp"
@@ -28,11 +29,14 @@ public:
   explicit DatabaseManagerSQLite(std::string dbPath);
   ~DatabaseManagerSQLite() override;
 
-  [[nodiscard]] OptionalErrorMessage init();
+  [[nodiscard]] OptionalErrorMessage
+  init(std::string_view userPseudonym) override;
+  bool isInitialized() const override;
   [[nodiscard]] std::expected<std::vector<std::string>, std::string>
   isBannedUsers(std::span<const std::string> pseudonyms) noexcept override;
 
 private:
+  [[nodiscard]] OptionalErrorMessage openDatabase();
   [[nodiscard]] OptionalErrorMessage ensureOpen();
 
   const std::string bannedUsersTable_ = "banned_users";

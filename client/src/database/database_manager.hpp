@@ -4,7 +4,7 @@
 #include <optional>
 #include <span>
 #include <string>
-#include <vector>
+#include <string_view>
 
 namespace database {
 
@@ -19,6 +19,20 @@ public:
    * @brief Virtual destructor for interface cleanup.
    */
   virtual ~IDatabaseManager() = default;
+
+  /**
+   * @brief Initialize the database connection.
+   * @param userPseudonym The pseudonym of the current user.
+   * @return std::nullopt on success, or error message on failure.
+   */
+  [[nodiscard]] virtual OptionalErrorMessage
+  init(std::string_view userPseudonym) = 0;
+
+  /**
+   * @brief Check wether database manager is initialized
+   * @return true if it is the case.
+   */
+  virtual bool isInitialized() const = 0;
 
   /**
    * @brief Filter the given pseudonyms against the banned_users table.

@@ -8,6 +8,7 @@
 #include <QStringList>
 #include <QWidget>
 
+class QAction;
 class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
@@ -81,5 +82,6 @@ private:
   QString pseudonym_;
   QString country_;
   QMenu *clientsContextMenu_{nullptr};
+  QAction *banUnbanAction_{nullptr};
   QHash<QString, QPointer<PrivateChatWindow>> privateChats_;
 };
