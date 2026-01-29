@@ -17,11 +17,61 @@
 #include <QStringList>
 #include <QTextBrowser>
 #include <QVBoxLayout>
+#include <qglobal.h>
+#include <qnamespace.h>
+#include <qobject.h>
 
 #include "chat.grpc.pb.h"
+#include "database/database_manager.hpp"
 #include "ui/private_chat_window.hpp"
 
-ChatWindow::ChatWindow(QWidget *parent) : QWidget(parent) { setupUi(); }
+class ChatWindowBanHelper {
+public:
+  explicit ChatWindowBanHelper(
+      QListWidgetItem *item,
+      const std::shared_ptr<database::IDatabaseManager> &dbManager)
+      : item_(item), dbManager_(dbManager) {
+    Q_ASSERT(item_ != nullptr);
+  }
+
+  bool isUserBanned() const {
+    const auto itemVal = item_->data(Qt::UserRole);
+    return ((not itemVal.isNull()) && itemVal.toBool());
+  }
+
+  void ban() noexcept {
+    if (const auto errorMessage =
+            dbManager_->banUser(item_->text().toStdString())) {
+      return;
+    }
+    // disable item
+    item_->setData(Qt::UserRole, true);
+    item_->setForeground(QBrush(Qt::gray));
+    item_->setText(item_->text() + bannedAddedText_);
+  }
+
+  void unban() noexcept {
+    if (const auto errorMessage =
+            dbManager_->unbanUser(item_->text().toStdString())) {
+      return;
+    }
+    // enable item
+    item_->setData(Qt::UserRole, false);
+    item_->setForeground(Qt::NoBrush);
+    item_->setText(item_->text().replace(bannedAddedText_, ""));
+  }
+
+private:
+  QListWidgetItem *item_;
+  std::shared_ptr<database::IDatabaseManager> dbManager_;
+  const QString bannedAddedText_ = " - banned";
+};
+
+ChatWindow::ChatWindow(std::shared_ptr<database::IDatabaseManager> dbManager,
+                       QWidget *parent)
+    : QWidget(parent), dbManager_(std::move(dbManager)) {
+  setupUi();
+}
 
 ChatWindow::~ChatWindow() {
   stopMessageStream();
@@ -59,7 +109,7 @@ void ChatWindow::setupUi() {
   clientsList_->setEditTriggers(QAbstractItemView::NoEditTriggers);
   clientsList_->setSortingEnabled(true);
   clientsList_->setUniformItemSizes(true);
-  clientsList_->setToolTip("Connected chatters");
+  // clientsList_->setToolTip("Connected chatters");
   clientsList_->setMinimumWidth(160);
   contentLayout->addWidget(clientsList_, 1);
 
@@ -96,6 +146,12 @@ void ChatWindow::setupUi() {
   });
 
   banUnbanAction_ = clientsContextMenu_->addAction("Ban/Unban");
+  connect(banUnbanAction_, &QAction::triggered, this, [this]() {
+    auto *item = clientsList_->currentItem();
+    if (item != nullptr) {
+      banUnbanUser(item);
+    }
+  });
 }
 
 void ChatWindow::addMessage(const QString &author, const QString &message,
@@ -164,6 +220,7 @@ void ChatWindow::onLoginSucceeded(const QString &pseudonym,
   emit loginCompleted();
   startMessageStream();
   startClientEventStream();
+  qDebug() << "Successfull login for user '" << pseudonym << "'";
 }
 
 void ChatWindow::onDisconnectFinished(bool ok, const QString &errorText) {
@@ -372,4 +429,9 @@ void ChatWindow::openPrivateChatWith(const QString &pseudonym) {
 void ChatWindow::onPrivateMessageRequested(const QString &recipient,
                                            const QString &content) {
   emit sendMessageRequested(content, std::make_optional(recipient));
+}
+
+void ChatWindow::banUnbanUser(QListWidgetItem *item) {
+  auto banHelper = ChatWindowBanHelper(item, dbManager_);
+  banHelper.isUserBanned() ? banHelper.unban() : banHelper.ban();
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 
 #include <QHash>
@@ -7,6 +8,10 @@
 #include <QString>
 #include <QStringList>
 #include <QWidget>
+
+namespace database {
+class IDatabaseManager;
+}
 
 class QAction;
 class QLineEdit;
@@ -21,7 +26,8 @@ class ChatWindow : public QWidget {
   Q_OBJECT
 
 public:
-  explicit ChatWindow(QWidget *parent = nullptr);
+  explicit ChatWindow(std::shared_ptr<database::IDatabaseManager> dbManager,
+                      QWidget *parent = nullptr);
   ~ChatWindow() override;
 
 public:
@@ -71,6 +77,7 @@ private:
   void stopClientEventStream();
   void showClientsContextMenu(const QPoint &pos);
   void openPrivateChatWith(const QString &pseudonym);
+  void banUnbanUser(QListWidgetItem *item);
   void onPrivateMessageRequested(const QString &recipient,
                                  const QString &content);
 
@@ -83,5 +90,6 @@ private:
   QString country_;
   QMenu *clientsContextMenu_{nullptr};
   QAction *banUnbanAction_{nullptr};
+  std::shared_ptr<database::IDatabaseManager> dbManager_;
   QHash<QString, QPointer<PrivateChatWindow>> privateChats_;
 };

@@ -10,12 +10,14 @@
 #include "ui/chat_window.hpp"
 #include "ui/login_view.hpp"
 
-MainWindow::MainWindow(const QString &serverAddress, QWidget *parent)
-    : QMainWindow(parent) {
+MainWindow::MainWindow(const QString &serverAddress,
+                       std::shared_ptr<database::IDatabaseManager> dbManager,
+                       QWidget *parent)
+    : QMainWindow(parent), dbManager_(std::move(dbManager)) {
   setWindowTitle("Chat Client");
   resize(640, 480);
 
-  chatWindow_ = new ChatWindow(this);
+  chatWindow_ = new ChatWindow(dbManager_, this);
   setCentralWidget(chatWindow_);
   chatWindow_->hide();
 
@@ -47,11 +49,6 @@ ChatWindow *MainWindow::chatWindow() const { return chatWindow_; }
 
 database::IDatabaseManager *MainWindow::databaseManager() const {
   return dbManager_.get();
-}
-
-void MainWindow::setDatabaseManager(
-    std::unique_ptr<database::IDatabaseManager> dbManager) {
-  dbManager_ = std::move(dbManager);
 }
 
 void MainWindow::onLoginCompleted() {

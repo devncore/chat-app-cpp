@@ -106,4 +106,44 @@ DatabaseManagerSQLite::isBannedUsers(
   }
 }
 
+OptionalErrorMessage
+DatabaseManagerSQLite::banUser(std::string_view pseudonym) noexcept {
+  if (const auto error = ensureOpen(); error.has_value()) {
+    return error;
+  }
+
+  try {
+    SQLite::Statement query(*db_, "INSERT INTO " + bannedUsersTable_ +
+                                      " (pseudonym) SELECT ? WHERE NOT EXISTS "
+                                      "(SELECT 1 FROM " +
+                                      bannedUsersTable_ +
+                                      " WHERE pseudonym = ?);");
+    query.bind(1, std::string(pseudonym));
+    query.bind(2, std::string(pseudonym));
+    query.exec();
+  } catch (const std::exception &ex) {
+    return std::string("Failed to ban user: ") + ex.what();
+  }
+
+  return std::nullopt;
+}
+
+OptionalErrorMessage
+DatabaseManagerSQLite::unbanUser(std::string_view pseudonym) noexcept {
+  if (const auto error = ensureOpen(); error.has_value()) {
+    return error;
+  }
+
+  try {
+    SQLite::Statement query(*db_, "DELETE FROM " + bannedUsersTable_ +
+                                      " WHERE pseudonym = ?;");
+    query.bind(1, std::string(pseudonym));
+    query.exec();
+  } catch (const std::exception &ex) {
+    return std::string("Failed to unban user: ") + ex.what();
+  }
+
+  return std::nullopt;
+}
+
 } // namespace database

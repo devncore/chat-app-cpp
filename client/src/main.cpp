@@ -44,9 +44,8 @@ int main(int argc, char *argv[]) {
   useExternalStyleSheet(app, "./client/src/ui/style.css");
 
   // instantiate components
-  MainWindow mainWindow(serverAddress);
-  mainWindow.setDatabaseManager(
-      std::make_unique<database::DatabaseManagerSQLite>());
+  MainWindow mainWindow(serverAddress,
+                        std::make_shared<database::DatabaseManagerSQLite>());
   auto *loginView = mainWindow.loginView();
   auto *chatWindow = mainWindow.chatWindow();
   auto *grpcChatClient =
@@ -63,17 +62,6 @@ int main(int argc, char *argv[]) {
   // signals LoginView -> ChatWindow
   QObject::connect(loginView, &LoginView::loginSucceeded, chatWindow,
                    &ChatWindow::onLoginSucceeded);
-
-  // initialize database after login
-  QObject::connect(loginView, &LoginView::loginSucceeded, &mainWindow,
-                   [&mainWindow](const QString &pseudonym) {
-                     if (auto *dbManager = mainWindow.databaseManager()) {
-                       auto error = dbManager->init(pseudonym.toStdString());
-                       if (error) {
-                         qWarning() << "Failed to init database:" << error->c_str();
-                       }
-                     }
-                   });
 
   // signals ChatWindow -> grpc
   QObject::connect(chatWindow, &ChatWindow::disconnectRequested, grpcChatClient,

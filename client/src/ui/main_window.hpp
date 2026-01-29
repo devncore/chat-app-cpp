@@ -20,13 +20,14 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit MainWindow(const QString &serverAddress, QWidget *parent = nullptr);
+  MainWindow(const QString &serverAddress,
+             std::shared_ptr<database::IDatabaseManager> dbManager,
+             QWidget *parent = nullptr);
   ~MainWindow() override;
 
   LoginView *loginView() const;
   ChatWindow *chatWindow() const;
   database::IDatabaseManager *databaseManager() const;
-  void setDatabaseManager(std::unique_ptr<database::IDatabaseManager> dbManager);
 
 protected:
   void closeEvent(QCloseEvent *event) override;
@@ -41,5 +42,5 @@ private:
   ChatWindow *chatWindow_;
   QToolBar *chatToolBar_;
   QAction *disconnectAction_;
-  std::unique_ptr<database::IDatabaseManager> dbManager_;
+  std::shared_ptr<database::IDatabaseManager> dbManager_;
 };
