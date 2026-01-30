@@ -79,6 +79,7 @@ void MainWindow::onDisconnectTriggered() {
   chatWindow_->hide();
   chatToolBar_->hide();
   loginDock_->show();
+  dbManager_->resetConnection();
   setWindowTitle("Chat Client");
 }
 

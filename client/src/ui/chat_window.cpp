@@ -20,52 +20,11 @@
 #include <qglobal.h>
 #include <qnamespace.h>
 #include <qobject.h>
+#include <utility>
 
 #include "chat.grpc.pb.h"
-#include "database/database_manager.hpp"
+#include "ui/client_list_helper.hpp"
 #include "ui/private_chat_window.hpp"
-
-class ChatWindowBanHelper {
-public:
-  explicit ChatWindowBanHelper(
-      QListWidgetItem *item,
-      const std::shared_ptr<database::IDatabaseManager> &dbManager)
-      : item_(item), dbManager_(dbManager) {
-    Q_ASSERT(item_ != nullptr);
-  }
-
-  bool isUserBanned() const {
-    const auto itemVal = item_->data(Qt::UserRole);
-    return ((not itemVal.isNull()) && itemVal.toBool());
-  }
-
-  void ban() noexcept {
-    if (const auto errorMessage =
-            dbManager_->banUser(item_->text().toStdString())) {
-      return;
-    }
-    // disable item
-    item_->setData(Qt::UserRole, true);
-    item_->setForeground(QBrush(Qt::gray));
-    item_->setText(item_->text() + bannedAddedText_);
-  }
-
-  void unban() noexcept {
-    if (const auto errorMessage =
-            dbManager_->unbanUser(item_->text().toStdString())) {
-      return;
-    }
-    // enable item
-    item_->setData(Qt::UserRole, false);
-    item_->setForeground(Qt::NoBrush);
-    item_->setText(item_->text().replace(bannedAddedText_, ""));
-  }
-
-private:
-  QListWidgetItem *item_;
-  std::shared_ptr<database::IDatabaseManager> dbManager_;
-  const QString bannedAddedText_ = " - banned";
-};
 
 ChatWindow::ChatWindow(std::shared_ptr<database::IDatabaseManager> dbManager,
                        QWidget *parent)
@@ -109,9 +68,12 @@ void ChatWindow::setupUi() {
   clientsList_->setEditTriggers(QAbstractItemView::NoEditTriggers);
   clientsList_->setSortingEnabled(true);
   clientsList_->setUniformItemSizes(true);
-  // clientsList_->setToolTip("Connected chatters");
+  clientsList_->setToolTip("Connected chatters");
   clientsList_->setMinimumWidth(160);
   contentLayout->addWidget(clientsList_, 1);
+
+  clientListHelper_ =
+      std::make_unique<ClientListHelper>(clientsList_, dbManager_);
 
   layout->addLayout(contentLayout, 1);
 
@@ -141,7 +103,7 @@ void ChatWindow::setupUi() {
   connect(privateMessageAction, &QAction::triggered, this, [this]() {
     auto *item = clientsList_->currentItem();
     if (item != nullptr) {
-      openPrivateChatWith(item->text());
+      openPrivateChatWith(clientListHelper_->pseudonym(item->text()));
     }
   });
 
@@ -216,10 +178,10 @@ void ChatWindow::onLoginSucceeded(const QString &pseudonym,
   pseudonym_ = pseudonym;
   country_ = country;
   connected_ = true;
-  initChatView(welcomeMessage, connectedPseudonyms);
   emit loginCompleted();
   startMessageStream();
   startClientEventStream();
+  initChatView(welcomeMessage, connectedPseudonyms);
   qDebug() << "Successfull login for user '" << pseudonym << "'";
 }
 
@@ -273,20 +235,14 @@ void ChatWindow::onClientEventStreamError(const QString &errorText) {
 void ChatWindow::initChatView(const QString &welcomeMessage,
                               const QStringList &connectedPseudonyms) {
   conversation_->clear();
-  if (clientsList_ != nullptr) {
-    clientsList_->clear();
 
-    // Add self first
-    addClientToList(pseudonym_);
+  QStringList allUsers;
+  allUsers.append(pseudonym_);
+  allUsers.append(connectedPseudonyms);
+  clientListHelper_->populateList(allUsers);
 
-    // Add all other connected clients from initial roster
-    for (const auto &name : connectedPseudonyms) {
-      addClientToList(name);
-    }
-
-    if (clientsList_->count() > 0) {
-      clientsList_->setCurrentRow(0);
-    }
+  if (clientsList_->count() > 0) {
+    clientsList_->setCurrentRow(0);
   }
 
   addMessage(
@@ -301,70 +257,21 @@ void ChatWindow::initChatView(const QString &welcomeMessage,
   input_->setFocus();
 }
 
-bool ChatWindow::addClientToList(const QString &pseudonym) {
-  if (clientsList_ == nullptr) {
-    return false;
-  }
-
-  const auto trimmed = pseudonym.trimmed();
-  if (trimmed.isEmpty()) {
-    return false;
-  }
-
-  for (int i = 0; i < clientsList_->count(); ++i) {
-    auto *item = clientsList_->item(i);
-    if ((item != nullptr) &&
-        QString::compare(item->text(), trimmed, Qt::CaseInsensitive) == 0) {
-      item->setText(trimmed);
-      return false;
-    }
-  }
-
-  clientsList_->addItem(trimmed);
-  return true;
-}
-
-bool ChatWindow::removeClientFromList(const QString &pseudonym) {
-  if (clientsList_ == nullptr) {
-    return false;
-  }
-
-  const auto trimmed = pseudonym.trimmed();
-  if (trimmed.isEmpty()) {
-    return false;
-  }
-
-  for (int i = 0; i < clientsList_->count(); ++i) {
-    auto *item = clientsList_->item(i);
-    if ((item != nullptr) &&
-        QString::compare(item->text(), trimmed, Qt::CaseInsensitive) == 0) {
-      delete clientsList_->takeItem(i);
-      return true;
-    }
-  }
-
-  return false;
-}
-
 void ChatWindow::handleClientEvent(int eventType, const QString &pseudonym) {
-  if (clientsList_ == nullptr) {
-    return;
-  }
-
   if (pseudonym.isEmpty()) {
     return;
   }
 
   switch (eventType) {
   case chat::ClientEventData::ADD: {
-    if (addClientToList(pseudonym)) {
+    if (clientListHelper_->addUser(pseudonym)) {
       addMessage("System", QStringLiteral("%1 joined the chat.").arg(pseudonym),
                  MESSAGE_COLOR_USER_CONNECT_);
     }
     break;
   }
   case chat::ClientEventData::REMOVE: {
-    if (removeClientFromList(pseudonym)) {
+    if (clientListHelper_->removeUser(pseudonym)) {
       addMessage("System",
                  QStringLiteral("%1 has left the chat.").arg(pseudonym),
                  MESSAGE_COLOR_USER_DISCONNECT_);
@@ -394,7 +301,7 @@ void ChatWindow::showClientsContextMenu(const QPoint &pos) {
     return;
   }
 
-  const auto pseudonym = item->text();
+  const auto pseudonym = clientListHelper_->pseudonym(item->text());
 
   if (QString::compare(pseudonym, pseudonym_, Qt::CaseInsensitive) == 0) {
     return;
@@ -432,6 +339,8 @@ void ChatWindow::onPrivateMessageRequested(const QString &recipient,
 }
 
 void ChatWindow::banUnbanUser(QListWidgetItem *item) {
-  auto banHelper = ChatWindowBanHelper(item, dbManager_);
-  banHelper.isUserBanned() ? banHelper.unban() : banHelper.ban();
+  const auto pseudonym = item->text();
+  clientListHelper_->isUserBanned(pseudonym)
+      ? clientListHelper_->unbanUser(pseudonym)
+      : clientListHelper_->banUser(pseudonym);
 }

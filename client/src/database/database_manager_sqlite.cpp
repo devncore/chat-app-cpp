@@ -33,6 +33,8 @@ DatabaseManagerSQLite::init(std::string_view userPseudonym) {
   return openDatabase();
 }
 
+void DatabaseManagerSQLite::resetConnection() { db_.reset(); }
+
 bool DatabaseManagerSQLite::isInitialized() const { return (db_ != nullptr); }
 
 OptionalErrorMessage DatabaseManagerSQLite::openDatabase() {
@@ -46,7 +48,7 @@ OptionalErrorMessage DatabaseManagerSQLite::openDatabase() {
 
     db_->exec("CREATE TABLE IF NOT EXISTS " + bannedUsersTable_ +
               " (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-              "pseudonym TEXT NOT NULL);");
+              "pseudonym TEXT NOT NULL UNIQUE);");
   } catch (const std::exception &ex) {
     db_.reset();
     return std::string("Failed to open database: ") + ex.what();
@@ -69,43 +71,6 @@ OptionalErrorMessage DatabaseManagerSQLite::ensureOpen() {
   return std::nullopt;
 }
 
-std::expected<std::vector<std::string>, std::string>
-DatabaseManagerSQLite::isBannedUsers(
-    std::span<const std::string> pseudonyms) noexcept {
-  if (pseudonyms.empty()) {
-    return std::vector<std::string>{};
-  }
-
-  if (const auto error = ensureOpen(); error.has_value()) {
-    return std::unexpected(*error);
-  }
-
-  try {
-    std::string placeholders = "?";
-    for (std::size_t i = 1; i < pseudonyms.size(); ++i) {
-      placeholders += ", ?";
-    }
-
-    SQLite::Statement query(*db_, "SELECT pseudonym FROM " + bannedUsersTable_ +
-                                      " WHERE pseudonym IN (" + placeholders +
-                                      ");");
-
-    for (std::size_t i = 0; i < pseudonyms.size(); ++i) {
-      query.bind(static_cast<int>(i) + 1, pseudonyms[i]);
-    }
-
-    std::vector<std::string> bannedUsers;
-    while (query.executeStep()) {
-      bannedUsers.emplace_back(query.getColumn(0).getString());
-    }
-
-    return bannedUsers;
-  } catch (const std::exception &ex) {
-    return std::unexpected(std::string("Failed to query banned users: ") +
-                           ex.what());
-  }
-}
-
 OptionalErrorMessage
 DatabaseManagerSQLite::banUser(std::string_view pseudonym) noexcept {
   if (const auto error = ensureOpen(); error.has_value()) {
@@ -113,13 +78,10 @@ DatabaseManagerSQLite::banUser(std::string_view pseudonym) noexcept {
   }
 
   try {
-    SQLite::Statement query(*db_, "INSERT INTO " + bannedUsersTable_ +
-                                      " (pseudonym) SELECT ? WHERE NOT EXISTS "
-                                      "(SELECT 1 FROM " +
+    SQLite::Statement query(*db_, "INSERT OR IGNORE INTO " +
                                       bannedUsersTable_ +
-                                      " WHERE pseudonym = ?);");
+                                      " (pseudonym) VALUES (?);");
     query.bind(1, std::string(pseudonym));
-    query.bind(2, std::string(pseudonym));
     query.exec();
   } catch (const std::exception &ex) {
     return std::string("Failed to ban user: ") + ex.what();
@@ -144,6 +106,23 @@ DatabaseManagerSQLite::unbanUser(std::string_view pseudonym) noexcept {
   }
 
   return std::nullopt;
+}
+
+std::expected<bool, std::string>
+DatabaseManagerSQLite::isUserBanned(std::string_view pseudonym) noexcept {
+  if (const auto error = ensureOpen(); error.has_value()) {
+    return std::unexpected(*error);
+  }
+
+  try {
+    SQLite::Statement query(*db_, "SELECT 1 FROM " + bannedUsersTable_ +
+                                      " WHERE pseudonym = ? LIMIT 1;");
+    query.bind(1, std::string(pseudonym));
+    return query.executeStep();
+  } catch (const std::exception &ex) {
+    return std::unexpected(std::string("Failed to check banned user: ") +
+                           ex.what());
+  }
 }
 
 } // namespace database

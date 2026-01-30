@@ -13,6 +13,7 @@ namespace database {
 class IDatabaseManager;
 }
 
+class ClientListHelper;
 class QAction;
 class QLineEdit;
 class QListWidget;
@@ -68,8 +69,6 @@ private:
   void handleSend();
   void initChatView(const QString &welcomeMessage,
                     const QStringList &connectedPseudonyms);
-  bool addClientToList(const QString &pseudonym);
-  bool removeClientFromList(const QString &pseudonym);
   void handleClientEvent(int eventType, const QString &pseudonym);
   void startMessageStream();
   void stopMessageStream();
@@ -91,5 +90,6 @@ private:
   QMenu *clientsContextMenu_{nullptr};
   QAction *banUnbanAction_{nullptr};
   std::shared_ptr<database::IDatabaseManager> dbManager_;
+  std::unique_ptr<ClientListHelper> clientListHelper_;
   QHash<QString, QPointer<PrivateChatWindow>> privateChats_;
 };

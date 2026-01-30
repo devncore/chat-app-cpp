@@ -28,6 +28,7 @@ qt_add_executable(chat_client
     src/main.cpp
     src/ui/main_window.cpp
     src/ui/chat_window.cpp
+    src/ui/client_list_helper.cpp
     src/ui/login_view.cpp
     src/ui/private_chat_window.cpp
     src/service/chat_service_grpc.cpp

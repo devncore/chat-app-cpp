@@ -31,13 +31,14 @@ public:
 
   [[nodiscard]] OptionalErrorMessage
   init(std::string_view userPseudonym) override;
+  void resetConnection() override;
   bool isInitialized() const override;
-  [[nodiscard]] std::expected<std::vector<std::string>, std::string>
-  isBannedUsers(std::span<const std::string> pseudonyms) noexcept override;
   [[nodiscard]] OptionalErrorMessage
   banUser(std::string_view pseudonym) noexcept override;
   [[nodiscard]] OptionalErrorMessage
   unbanUser(std::string_view pseudonym) noexcept override;
+  [[nodiscard]] std::expected<bool, std::string>
+  isUserBanned(std::string_view pseudonym) noexcept override;
 
 private:
   [[nodiscard]] OptionalErrorMessage openDatabase();
