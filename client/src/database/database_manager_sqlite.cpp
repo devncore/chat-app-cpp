@@ -33,7 +33,10 @@ DatabaseManagerSQLite::init(std::string_view userPseudonym) {
   return openDatabase();
 }
 
-void DatabaseManagerSQLite::resetConnection() { db_.reset(); }
+void DatabaseManagerSQLite::resetConnection() {
+  db_.reset();
+  dbPath_.clear();
+}
 
 bool DatabaseManagerSQLite::isInitialized() const { return (db_ != nullptr); }
 
@@ -58,6 +61,10 @@ OptionalErrorMessage DatabaseManagerSQLite::openDatabase() {
 }
 
 OptionalErrorMessage DatabaseManagerSQLite::ensureOpen() {
+  if (dbPath_.empty()) {
+    return std::string("Database is not initialized. Call init() first.");
+  }
+
   if (!db_) {
     if (const auto error = openDatabase(); error.has_value()) {
       return error;
