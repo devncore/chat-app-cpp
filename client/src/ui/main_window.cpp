@@ -44,11 +44,11 @@ MainWindow::MainWindow(const QString &serverAddress,
   chatToolBar_ = addToolBar("Chat");
   chatToolBar_->setMovable(false);
   disconnectAction_ = chatToolBar_->addAction("Disconnect");
-  disconnectAction_->setIcon(QIcon("./client/src/ui/icons/disconnect.svg"));
+  disconnectAction_->setIcon(QIcon(":/icons/disconnect.svg"));
   connect(disconnectAction_, &QAction::triggered, this,
           &MainWindow::onDisconnectTriggered);
   banListAction_ = chatToolBar_->addAction("Ban list");
-  banListAction_->setIcon(QIcon("./client/src/ui/icons/ban_list_icon.svg"));
+  banListAction_->setIcon(QIcon(":/icons//ban_list_icon.svg"));
   connect(banListAction_, &QAction::triggered, this,
           &MainWindow::onBanListToggled);
   chatToolBar_->hide();

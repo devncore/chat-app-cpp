@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC>
+  <qresource prefix="/">
+    <file>icons/ban_list_icon.svg</file>
+    <file>icons/disconnect.svg</file>
+  </qresource>
+</RCC>

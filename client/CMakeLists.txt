@@ -35,6 +35,7 @@ qt_add_executable(chat_client
     src/ui/private_chat_window.cpp
     src/service/chat_service_grpc.cpp
     src/database/database_manager_sqlite.cpp
+    src/ui/res/app.qrc
 )
 
 target_include_directories(chat_client PRIVATE 

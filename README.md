@@ -51,7 +51,8 @@ application.
 chat/
   client/
     src/
-      ui/           MainWindow, ChatWindow, LoginView, PrivateChatWindow
+      ui/           MainWindow, ChatWindow, LoginView, PrivateChatWindow,
+                    BanListView, BannedUsersModel
       service/      ChatServiceGrpc (gRPC client adapter)
       database/     IDatabaseManager, DatabaseManagerSQLite
   server/
@@ -97,6 +98,10 @@ A curated list of Qt features and patterns demonstrated in this project.
   ([main_window.cpp](client/src/ui/main_window.cpp))
 - **QToolBar & QAction** -- toolbar with disconnect action and SVG icon
   ([main_window.cpp](client/src/ui/main_window.cpp))
+- **Qt Resource System (.qrc)** -- icons are bundled via a `.qrc` file and
+  loaded with `:/` resource paths instead of filesystem paths, the idiomatic
+  Qt way to embed assets into the binary
+  ([app.qrc](client/src/ui/res/app.qrc))
 - **QWidget as standalone window** -- `PrivateChatWindow` uses `Qt::Window`
   flag to spawn independent top-level windows
   ([private_chat_window.cpp](client/src/ui/private_chat_window.cpp))
@@ -117,6 +122,11 @@ A curated list of Qt features and patterns demonstrated in this project.
 - **QListWidget & item roles** -- user roster with `Qt::UserRole` data
   storage for banned-state tracking
   ([chat_window.cpp](client/src/ui/chat_window.cpp))
+- **Model/View with QAbstractListModel** -- `BannedUsersModel` subclasses
+  `QAbstractListModel` and drives a `QListView`, separating data from
+  presentation
+  ([banned_users_model.hpp](client/src/ui/ban_list_view/banned_users_model.hpp),
+  [ban_list_view.cpp](client/src/ui/ban_list_view/ban_list_view.cpp))
 - **QPointer** -- prevent dangling pointers to private chat windows
   ([chat_window.hpp](client/src/ui/chat_window.hpp))
 - **QCommandLineParser** -- CLI argument parsing for the `--server` option
