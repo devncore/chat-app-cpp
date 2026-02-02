@@ -39,6 +39,8 @@ public:
   unbanUser(std::string_view pseudonym) noexcept override;
   [[nodiscard]] std::expected<bool, std::string>
   isUserBanned(std::string_view pseudonym) noexcept override;
+  [[nodiscard]] std::expected<std::vector<std::string>, std::string>
+  getAllBannedUsers() noexcept override;
 
 private:
   [[nodiscard]] OptionalErrorMessage openDatabase();

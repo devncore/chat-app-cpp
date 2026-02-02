@@ -7,6 +7,7 @@
 #include <QToolBar>
 
 #include "database/database_manager.hpp"
+#include "ui/ban_list_view/ban_list_view.hpp"
 #include "ui/chat_window.hpp"
 #include "ui/login_view.hpp"
 
@@ -17,27 +18,39 @@ MainWindow::MainWindow(const QString &serverAddress,
   setWindowTitle("Chat Client");
   resize(640, 480);
 
+  // chat view
   chatWindow_ = new ChatWindow(dbManager_, this);
   setCentralWidget(chatWindow_);
   chatWindow_->hide();
 
+  // login view
   loginView_ = new LoginView(serverAddress, this);
-
   loginDock_ = new QDockWidget("Login", this);
   loginDock_->setWidget(loginView_);
   loginDock_->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
   loginDock_->setFeatures(QDockWidget::DockWidgetMovable);
   addDockWidget(Qt::LeftDockWidgetArea, loginDock_);
-
   connect(chatWindow_, &ChatWindow::loginCompleted, this,
           &MainWindow::onLoginCompleted);
 
+  // ban list view
+  banListView_ = new BanListView(dbManager_.get(), this);
+  addDockWidget(Qt::RightDockWidgetArea, banListView_);
+  banListView_->hide();
+  connect(banListView_, &BanListView::userUnbanned, chatWindow_,
+          &ChatWindow::onUserUnbanned);
+
+  // tool bar setup
   chatToolBar_ = addToolBar("Chat");
   chatToolBar_->setMovable(false);
   disconnectAction_ = chatToolBar_->addAction("Disconnect");
   disconnectAction_->setIcon(QIcon("./client/src/ui/icons/disconnect.svg"));
   connect(disconnectAction_, &QAction::triggered, this,
           &MainWindow::onDisconnectTriggered);
+  banListAction_ = chatToolBar_->addAction("Ban list");
+  banListAction_->setIcon(QIcon("./client/src/ui/icons/ban_list_icon.svg"));
+  connect(banListAction_, &QAction::triggered, this,
+          &MainWindow::onBanListToggled);
   chatToolBar_->hide();
 }
 
@@ -78,9 +91,19 @@ void MainWindow::onDisconnectTriggered() {
   chatWindow_->prepareClose();
   chatWindow_->hide();
   chatToolBar_->hide();
+  banListView_->hide();
   loginDock_->show();
   dbManager_->resetConnection();
   setWindowTitle("Chat Client");
+}
+
+void MainWindow::onBanListToggled() {
+  if (banListView_->isVisible()) {
+    banListView_->hide();
+  } else {
+    banListView_->refresh();
+    banListView_->show();
+  }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

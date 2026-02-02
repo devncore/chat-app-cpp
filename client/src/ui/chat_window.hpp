@@ -56,6 +56,7 @@ public slots:
   void onMessageStreamError(const QString &errorText);
   void onClientEventReceived(int eventType, const QString &pseudonym);
   void onClientEventStreamError(const QString &errorText);
+  void onUserUnbanned(const QString &pseudonym);
 
 private:
   static inline QString MESSAGE_COLOR_SYSTEM_{"blue"};

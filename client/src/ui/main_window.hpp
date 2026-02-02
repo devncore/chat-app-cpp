@@ -14,6 +14,7 @@ class QCloseEvent;
 class QDockWidget;
 class QToolBar;
 class LoginView;
+class BanListView;
 class ChatWindow;
 
 class MainWindow : public QMainWindow {
@@ -35,6 +36,7 @@ protected:
 private slots:
   void onLoginCompleted();
   void onDisconnectTriggered();
+  void onBanListToggled();
 
 private:
   QDockWidget *loginDock_;
@@ -42,5 +44,7 @@ private:
   ChatWindow *chatWindow_;
   QToolBar *chatToolBar_;
   QAction *disconnectAction_;
+  QAction *banListAction_;
+  BanListView *banListView_;
   std::shared_ptr<database::IDatabaseManager> dbManager_;
 };

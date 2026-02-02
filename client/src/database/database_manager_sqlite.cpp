@@ -132,4 +132,25 @@ DatabaseManagerSQLite::isUserBanned(std::string_view pseudonym) noexcept {
   }
 }
 
+std::expected<std::vector<std::string>, std::string>
+DatabaseManagerSQLite::getAllBannedUsers() noexcept {
+  if (const auto error = ensureOpen(); error.has_value()) {
+    return std::unexpected(*error);
+  }
+
+  try {
+    SQLite::Statement query(*db_, "SELECT pseudonym FROM " +
+                                      bannedUsersTable_ + ";");
+
+    std::vector<std::string> result;
+    while (query.executeStep()) {
+      result.emplace_back(query.getColumn(0).getString());
+    }
+    return result;
+  } catch (const std::exception &ex) {
+    return std::unexpected(std::string("Failed to fetch banned users: ") +
+                           ex.what());
+  }
+}
+
 } // namespace database

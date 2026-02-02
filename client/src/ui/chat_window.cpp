@@ -344,3 +344,9 @@ void ChatWindow::banUnbanUser(QListWidgetItem *item) {
       ? clientListHelper_->unbanUser(pseudonym)
       : clientListHelper_->banUser(pseudonym);
 }
+
+void ChatWindow::onUserUnbanned(const QString &pseudonym) {
+  if (clientListHelper_) {
+    clientListHelper_->unbanUser(pseudonym);
+  }
+}

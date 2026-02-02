@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace database {
 
@@ -62,6 +63,13 @@ public:
    */
   [[nodiscard]] virtual std::expected<bool, std::string>
   isUserBanned(std::string_view pseudonym) noexcept = 0;
+
+  /**
+   * @brief Retrieve all pseudonyms from the banned_users table.
+   * @return A vector of pseudonyms on success, or error message on failure.
+   */
+  [[nodiscard]] virtual std::expected<std::vector<std::string>, std::string>
+  getAllBannedUsers() noexcept = 0;
 };
 
 } // namespace database
