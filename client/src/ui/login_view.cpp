@@ -5,6 +5,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QShortcut>
 #include <QVBoxLayout>
 
 #include <utility>
@@ -39,6 +40,14 @@ LoginView::LoginView(QString serverAddress, QWidget *parent)
   layout->addWidget(connectButton_);
 
   connect(connectButton_, &QPushButton::clicked, this,
+          [this]() { handleConnect(); });
+
+  auto *enterShortcut = new QShortcut(QKeySequence(Qt::Key_Return), this);
+  connect(enterShortcut, &QShortcut::activated, this,
+          [this]() { handleConnect(); });
+
+  auto *numpadEnterShortcut = new QShortcut(QKeySequence(Qt::Key_Enter), this);
+  connect(numpadEnterShortcut, &QShortcut::activated, this,
           [this]() { handleConnect(); });
 }
 
