@@ -41,6 +41,7 @@ target_link_libraries(chat_server
         chat_proto
         Boost::program_options
         SQLiteCpp
+        better_enums
 )
 
 # Unit tests (build with -DBUILD_TESTS=ON)

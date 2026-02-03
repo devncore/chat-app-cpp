@@ -45,4 +45,5 @@ target_link_libraries(chat_client
     PRIVATE
         Qt6::Widgets
         chat_proto
-        SQLiteCpp)
+        SQLiteCpp
+        better_enums)

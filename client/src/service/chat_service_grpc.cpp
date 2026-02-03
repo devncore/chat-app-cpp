@@ -1,5 +1,6 @@
 #include "service/chat_service_grpc.hpp"
 
+#include <chrono>
 #include <qobject.h>
 #include <utility>
 
@@ -96,8 +97,7 @@ void ChatServiceGrpc::startClientEventStreamSlot() {
 void ChatServiceGrpc::stopClientEventStreamSlot() { stopClientEventStream(); }
 
 ChatServiceGrpc::ConnectResult
-ChatServiceGrpc::connect(std::string_view pseudonym,
-                         std::string_view gender,
+ChatServiceGrpc::connect(std::string_view pseudonym, std::string_view gender,
                          std::string_view country) {
   ensureStub();
 
@@ -108,6 +108,8 @@ ChatServiceGrpc::connect(std::string_view pseudonym,
 
   chat::ConnectResponse response;
   grpc::ClientContext context;
+  context.set_deadline(std::chrono::system_clock::now() +
+                       std::chrono::seconds(5));
   const auto status = stub_->Connect(&context, request, &response);
 
   return {.status = status, .response = response};
@@ -223,6 +225,12 @@ void ChatServiceGrpc::stopClientEventStream() {
   }
 
   clientEventStreamContext_.reset();
+}
+
+void ChatServiceGrpc::checkServerAvailability() {
+  ensureStub();
+  const grpc_connectivity_state state = channel_->GetState(true);
+  emit connectivityStateChanged(static_cast<int>(state));
 }
 
 void ChatServiceGrpc::ensureStub() {

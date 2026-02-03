@@ -57,6 +57,7 @@ signals:
   void messageStreamError(const QString &errorText);
   void clientEventReceived(int eventType, const QString &pseudonym);
   void clientEventStreamError(const QString &errorText);
+  void connectivityStateChanged(int state);
 
 public slots:
   void connectToServer(const QString &pseudonym, const QString &gender,
@@ -69,6 +70,7 @@ public slots:
   void stopMessageStreamSlot();
   void startClientEventStreamSlot();
   void stopClientEventStreamSlot();
+  void checkServerAvailability();
 
 private:
   void ensureStub();

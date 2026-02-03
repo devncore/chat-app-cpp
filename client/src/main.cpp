@@ -58,6 +58,12 @@ int main(int argc, char *argv[]) {
   // signals grpc -> LoginView
   QObject::connect(grpcChatClient, &ChatServiceGrpc::connectFinished, loginView,
                    &LoginView::onConnectFinished);
+  QObject::connect(grpcChatClient, &ChatServiceGrpc::connectivityStateChanged,
+                   loginView, &LoginView::onConnectivityStateChanged);
+
+  // signals LoginView -> grpc (server availability check)
+  QObject::connect(loginView, &LoginView::checkServerAvailabilityRequested,
+                   grpcChatClient, &ChatServiceGrpc::checkServerAvailability);
 
   // signals LoginView -> ChatWindow
   QObject::connect(loginView, &LoginView::loginSucceeded, chatWindow,

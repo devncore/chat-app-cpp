@@ -2,13 +2,13 @@
 
 #include <QComboBox>
 #include <QFormLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QShortcut>
+#include <QTimer>
 #include <QVBoxLayout>
-
-#include <utility>
 
 LoginView::LoginView(QString serverAddress, QWidget *parent)
     : QWidget(parent), serverAddress_(std::move(serverAddress)) {
@@ -37,7 +37,14 @@ LoginView::LoginView(QString serverAddress, QWidget *parent)
 
   connectButton_ = new QPushButton("Connect", this);
   connectButton_->setDefault(true);
+  connectButton_->setEnabled(false);
   layout->addWidget(connectButton_);
+
+  layout->addStretch();
+
+  serverStatusLabel_ = new QLabel("", this);
+  serverStatusLabel_->setStyleSheet("font-size: 10px;");
+  layout->addWidget(serverStatusLabel_, 0, Qt::AlignRight | Qt::AlignBottom);
 
   connect(connectButton_, &QPushButton::clicked, this,
           [this]() { handleConnect(); });
@@ -49,6 +56,12 @@ LoginView::LoginView(QString serverAddress, QWidget *parent)
   auto *numpadEnterShortcut = new QShortcut(QKeySequence(Qt::Key_Enter), this);
   connect(numpadEnterShortcut, &QShortcut::activated, this,
           [this]() { handleConnect(); });
+
+  serverCheckTimer_ = new QTimer(this);
+  serverCheckTimer_->setInterval(1000);
+  connect(serverCheckTimer_, &QTimer::timeout, this,
+          [this]() { emit checkServerAvailabilityRequested(); });
+  serverCheckTimer_->start();
 }
 
 QString LoginView::pseudonym() const {
@@ -94,4 +107,24 @@ void LoginView::onConnectFinished(bool ok, const QString &errorText,
   emit loginSucceeded(pseudonymInput_->text().trimmed(),
                       countryInput_->text().trimmed(), message,
                       connectedPseudonyms);
+}
+
+void LoginView::onConnectivityStateChanged(int stateValue) {
+  const auto maybeState =
+      ServerConnectionState::_from_integral_nothrow(stateValue);
+
+  if (!maybeState) {
+    qDebug() << "invalid server connectivity state";
+    return;
+  }
+
+  const ServerConnectionState state = *maybeState;
+  const QString &color = serverStateTextColorMap_.at(state);
+
+  serverStatusLabel_->setText(QString(state._to_string()).toLower());
+  serverStatusLabel_->setStyleSheet(
+      QStringLiteral("font-size: 10px; color: %1;").arg(color));
+
+  // Enable connect button only when channel is 'Ready'
+  connectButton_->setEnabled(state == +ServerConnectionState::READY);
 }
